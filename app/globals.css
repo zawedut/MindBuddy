@@ -1,26 +1,26 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ตั้งค่าธีมแบบ Inline (ถ้าจำเป็น) */
+@theme {
+  --color-bg-pastel: #FFE5F1;
+  --color-accent: #E85D9A;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* บังคับสีพื้นหลังหน้าเว็บ */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #FFE5F1; /* สีชมพูพาสเทล */
+  margin: 0;
+  padding: 0;
+}
+
+/* Keyframes สำหรับ Animation (ใส่ตรงนี้เพื่อให้ Tailwind v4 มองเห็นชัวร์ๆ) */
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
