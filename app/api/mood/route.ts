@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // ✅ เรียกจาก lib เพื่อกัน Database connection เต็ม
+import { prisma } from "../../../lib/prisma"; // ✅ เรียกจาก lib เพื่อกัน Database connection เต็ม
 
 // 1. ดึงข้อมูล (GET)
 export async function GET(request: Request) {
