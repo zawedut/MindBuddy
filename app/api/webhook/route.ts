@@ -27,7 +27,6 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Webhook Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
 }
 
 async function handleMessage(event: any) {
@@ -88,14 +87,44 @@ async function handleMessage(event: any) {
 
         const chat = model.startChat({ history: historyForAI });
 
-        try {
-            const result = await chat.sendMessage(userMessage);
-            replyText = result.response.text();
-        } catch (aiError) {
-            console.error("AI Error:", aiError);
-            replyText = "กอดนะ... ตอนนี้เรามึนๆ นิดหน่อย พิมพ์ใหม่ได้มั้ย? 🥺";
+                try {
+                    const result = await chat.sendMessage(userMessage);
+                    replyText = result.response.text();
+                } catch (aiError) {
+                    console.error("AI Error:", aiError);
+                    replyText = "กอดนะ... ตอนนี้เรามึนๆ นิดหน่อย พิมพ์ใหม่ได้มั้ย? 🥺";
+                }
+        
+                // Save to database and reply
+                await prisma.chatHistory.create({
+                  data: {
+                    userId: user.id,
+                    role: 'user',
+                    message: userMessage
+                  }
+                });
+        
+                await prisma.chatHistory.create({
+                  data: {
+                    userId: user.id,
+                    role: 'assistant',
+                    message: replyText
+                  }
+                });
+        
+                // 🚀 ส่งข้อความตอบกลับไปที่ LINE
+                if (replyToken) {
+                  console.log("Replying with token:", replyToken);
+                  await client.replyMessage({
+                    replyToken: replyToken,
+                    messages: [{ type: 'text', text: replyText }],
+                  });
+                } else {
+                  console.warn("No replyToken found in event:", event);
+                }
+              }
+          } catch (error) {
+            console.error('Handle Message Error:', error);
+          }
         }
-      }
-
-      // 💾 บันทึกประวัติ
-      await prisma.chatHistory.create
+}
