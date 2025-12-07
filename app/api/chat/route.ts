@@ -8,10 +8,8 @@ export async function POST(req: Request) {
   try {
     const { message, history } = await req.json();
 
-    // ✅ ใช้โมเดล gemini-1.5-flash (เร็วและฉลาดกว่า pro เก่า เหมาะกับแชท)
-    // และใส่ System Instruction ลงไปในการตั้งค่าโมเดลโดยตรง
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       systemInstruction: `
         คุณคือ 'น้องเรียนดี' (Nong Rian Dee) เพื่อนสนิทวัยรุ่นที่เป็น 'Safe Zone' ที่ดีที่สุดในโลก
 
