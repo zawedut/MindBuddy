@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     if (score <= 3) {
       try {
         // ✅ ใช้ Gemma-3-27b-it (โควต้าเยอะ + ฉลาด)
-        const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
         
         // Prompt สั่งให้รับบทเป็น MindBuddy
         const prompt = `
