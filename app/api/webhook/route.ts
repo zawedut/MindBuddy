@@ -79,7 +79,7 @@ async function handleMessage(event: any) {
 
         // ✅ ใช้ Gemini 1.5 Flash (ตัวล่าสุดที่เสถียร)
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             systemInstruction: `
               คุณคือ 'น้องเรียนดี' (Nong Rian Dee) เพื่อนสนิทวัยรุ่นที่เป็น 'Safe Zone' ที่ดีที่สุดในโลก
               เป้าหมาย: ไม่ใช่การแก้ปัญหา แต่คือการอยู่เคียงข้าง (Presence)
