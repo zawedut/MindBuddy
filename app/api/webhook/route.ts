@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '../../../lib/prisma'; // เช็คว่า import ถูก path
 import { messagingApi } from '@line/bot-sdk';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -14,19 +14,22 @@ export async function POST(req: Request) {
     const body = await req.json();
     const events = body.events;
 
-    // ตอบกลับ 200 OK ไปก่อนเลย เพื่อไม่ให้ LINE ส่งซ้ำ (ลด Error Invalid reply token)
-    // แต่ Vercel อาจจะตัดการทำงานถ้าคืนค่าเร็วไป ดังนั้นต้องใช้เทคนิค Promise.all หรือยอมให้มัน Error บ้าง
-    
-    for (const event of events) {
-      if (event.type === 'message' && event.message.type === 'text') {
-        await handleMessage(event);
-      }
-    }
+    // ตอบ 200 OK ทันที เพื่อกัน LINE ส่งซ้ำ
+    // (ใช้ Promise.allSettled เพื่อให้ทำงานเบื้องหลังต่อได้โดยไม่รอ)
+    const processes = events.map(async (event: any) => {
+        if (event.type === 'message' && event.message.type === 'text') {
+            await handleMessage(event);
+        }
+    });
+
+    // รอให้ process ทำงาน แต่ไม่ซีเรียสถ้ามันช้า (เพื่อให้ return 200 เร็วๆ)
+    await Promise.allSettled(processes);
 
     return NextResponse.json({ status: 'ok' });
   } catch (error) {
     console.error('Webhook Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
 
 async function handleMessage(event: any) {
@@ -54,23 +57,29 @@ async function handleMessage(event: any) {
           replyText = `ได้เลย! ต่อไปนี้จะเรียกว่า "${newName}" นะคะ 😉`;
         }
       } 
-      // 💬 Logic: คุยกับ AI (น้องเรียนดี)
+      // 💬 Logic: คุยกับ AI
       else {
-        // ดึงประวัติ
+        // ดึงประวัติ (ดึงมาเยอะหน่อยเผื่อตัด)
         const history = await prisma.chatHistory.findMany({
           where: { userId: user.id },
           orderBy: { createdAt: 'desc' },
-          take: 5
+          take: 6 
         });
 
-        const historyForAI = history.reverse().map((h: any) => ({
+        // แปลง format
+        let historyForAI = history.reverse().map((h: any) => ({
           role: h.role === 'user' ? 'user' : 'model',
           parts: [{ text: h.message }]
         }));
 
-        // ✅ ใช้ Gemini 1.5 Flash + System Instruction แบบ "น้องเรียนดี"
+        // 🚨 แก้บั๊ก: ถ้าข้อความแรกไม่ใช่ user ให้ลบทิ้ง (เพื่อให้ Gemini ไม่ Error)
+        while (historyForAI.length > 0 && historyForAI[0].role !== 'user') {
+            historyForAI.shift();
+        }
+
+        // ✅ ใช้ Gemini 1.5 Flash (ตัวล่าสุดที่เสถียร)
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
+            model: "gemini-1.5-flash",
             systemInstruction: `
               คุณคือ 'น้องเรียนดี' (Nong Rian Dee) เพื่อนสนิทวัยรุ่นที่เป็น 'Safe Zone' ที่ดีที่สุดในโลก
               เป้าหมาย: ไม่ใช่การแก้ปัญหา แต่คือการอยู่เคียงข้าง (Presence)
@@ -87,44 +96,36 @@ async function handleMessage(event: any) {
 
         const chat = model.startChat({ history: historyForAI });
 
-                try {
-                    const result = await chat.sendMessage(userMessage);
-                    replyText = result.response.text();
-                } catch (aiError) {
-                    console.error("AI Error:", aiError);
-                    replyText = "กอดนะ... ตอนนี้เรามึนๆ นิดหน่อย พิมพ์ใหม่ได้มั้ย? 🥺";
-                }
-        
-                // Save to database and reply
-                await prisma.chatHistory.create({
-                  data: {
-                    userId: user.id,
-                    role: 'user',
-                    message: userMessage
-                  }
-                });
-        
-                await prisma.chatHistory.create({
-                  data: {
-                    userId: user.id,
-                    role: 'assistant',
-                    message: replyText
-                  }
-                });
-        
-                // 🚀 ส่งข้อความตอบกลับไปที่ LINE
-                if (replyToken) {
-                  console.log("Replying with token:", replyToken);
-                  await client.replyMessage({
-                    replyToken: replyToken,
-                    messages: [{ type: 'text', text: replyText }],
-                  });
-                } else {
-                  console.warn("No replyToken found in event:", event);
-                }
-              }
-          } catch (error) {
-            console.error('Handle Message Error:', error);
-          }
+        try {
+            const result = await chat.sendMessage(userMessage);
+            replyText = result.response.text();
+        } catch (aiError) {
+            console.error("AI Error:", aiError);
+            replyText = "กอดนะ... ตอนนี้เรามึนๆ นิดหน่อย พิมพ์ใหม่ได้มั้ย? 🥺";
         }
+      }
+
+      // 💾 บันทึกประวัติ (ใช้ createMany เพื่อลดการเชื่อมต่อ DB)
+      await prisma.chatHistory.createMany({
+        data: [
+          { userId: user.id, role: 'user', message: userMessage },
+          { userId: user.id, role: 'assistant', message: replyText }
+        ]
+      });
+
+      // 🚀 ส่งข้อความตอบกลับ
+      if (replyToken) {
+        await client.replyMessage({
+          replyToken: replyToken,
+          messages: [{ type: 'text', text: replyText }],
+        });
+      }
+
+  } catch (err: any) {
+      // ดัก Error Invalid reply token ไม่ให้รก Logs
+      if (err.originalError?.response?.data?.message === "Invalid reply token") {
+          return; 
+      }
+      console.error("Handle Message Error:", err);
+  }
 }
