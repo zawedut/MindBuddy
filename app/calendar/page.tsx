@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Mitr, Fredoka } from 'next/font/google';
-import liff from '@line/liff'; // ✅ เรียกใช้ LINE SDK
+import liff from '@line/liff';
 
 // Config Font
 const mitr = Mitr({ weight: ['400', '500', '600'], subsets: ['thai'], variable: '--font-mitr' });
@@ -14,7 +14,7 @@ interface MoodMap { [key: string]: MoodEntry; }
 
 export default function MoodCalendar() {
   // State
-  const [profile, setProfile] = useState<any>(null); // ✅ เก็บข้อมูลคนเล่น (ชื่อ, รูป, ID)
+  const [profile, setProfile] = useState<any>(null);
   const [view, setView] = useState<Date>(new Date());
   const [moods, setMoods] = useState<MoodMap>({});
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -25,35 +25,24 @@ export default function MoodCalendar() {
   const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const weekDays = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 
-  // ✅ 1. เริ่มระบบ LINE Login (LIFF)
   useEffect(() => {
     const initLiff = async () => {
       try {
-        // เริ่มการทำงานของ LIFF
         await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
-
-        // ถ้ายังไม่ Login ให้เด้งไปหน้า Login ไลน์
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
         }
-
-        // ถ้า Login แล้ว -> ดึงข้อมูลโปรไฟล์
         const userProfile = await liff.getProfile();
         setProfile(userProfile);
-
-        // ดึงข้อมูลอารมณ์จาก Database (ใช้ userId จริงๆ จากไลน์)
         fetchMoods(userProfile.userId);
-
       } catch (e) {
         console.error("LIFF Init Failed", e);
       }
     };
-
     initLiff();
   }, []);
 
-  // ฟังก์ชันดึงข้อมูล (แยกออกมาเพื่อให้เรียกใช้หลังจากได้ Profile)
   const fetchMoods = async (lineId: string) => {
     try {
         const res = await fetch(`/api/mood?lineId=${lineId}`);
@@ -84,7 +73,6 @@ export default function MoodCalendar() {
 
   const currentTheme = getSeasonTheme(view);
 
-  // Calendar Logic
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
   const handlePrevMonth = () => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1));
@@ -103,9 +91,8 @@ export default function MoodCalendar() {
     setTimeout(() => { setSelectedKey(null); setSelectedScore(null); setComment(""); }, 200);
   };
 
-  // ✅ 2. แก้ไขการบันทึก: ส่งข้อมูล User จริงๆ ไปให้ API
   const handleSave = async () => {
-    if (selectedKey && selectedScore !== null && profile) { // ต้องมี profile ถึงจะบันทึกได้
+    if (selectedKey && selectedScore !== null && profile) {
       const newMoods = { 
         ...moods, 
         [selectedKey]: { score: selectedScore, comment: comment.trim(), updated: Date.now() }
@@ -117,10 +104,10 @@ export default function MoodCalendar() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            lineId: profile.userId, // ✅ ใช้ ID จริงจาก LINE
+            lineId: profile.userId,
             profile: { 
-                displayName: profile.displayName, // ✅ ใช้ชื่อจริง
-                pictureUrl: profile.pictureUrl    // ✅ ใช้รูปจริง
+                displayName: profile.displayName,
+                pictureUrl: profile.pictureUrl
             },
             dateKey: selectedKey,
             score: selectedScore,
@@ -150,6 +137,7 @@ export default function MoodCalendar() {
     }
   };
 
+  // 🛠️ ส่วนที่แก้ Layout (สำคัญ)
   const renderCalendar = () => {
     const year = view.getFullYear();
     const month = view.getMonth();
@@ -162,12 +150,16 @@ export default function MoodCalendar() {
         const entry = moods[key];
         const isToday = new Date().toDateString() === new Date(yearIndex, monthIndex, day).toDateString();
         
-        let cellClass = "relative w-full aspect-[1/1.4] rounded-2xl flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ease-out p-1 ";
+        // ✅ ปรับ CSS Base: ใส่ overflow-hidden และจัด justify-start (ชิดบน) เสมอ ไม่ว่าจะมีอารมณ์หรือไม่
+        let cellClass = "relative w-full aspect-[1/1.4] rounded-2xl flex flex-col items-center justify-start pt-1.5 cursor-pointer border-2 transition-all duration-200 ease-out p-1 overflow-hidden ";
+        
         if (!isCurrentMonth) cellClass += "opacity-40 ";
         
         if (entry) {
-            cellClass += `${getMoodStyles(entry.score)} justify-start pt-1.5 `;
+            // มีอารมณ์: เปลี่ยนสีพื้นหลัง
+            cellClass += `${getMoodStyles(entry.score)} `;
         } else {
+            // ไม่มีอารมณ์: สีขาวปกติ
             cellClass += `bg-white border-transparent hover:-translate-y-1 ${currentTheme.cellHover} `;
             if (isToday) cellClass += `!bg-white ring-2 ring-offset-1 `;
         }
@@ -179,9 +171,12 @@ export default function MoodCalendar() {
                 className={cellClass}
                 style={isToday && !entry ? { borderColor: currentTheme.accent, color: currentTheme.accent, '--tw-ring-color': currentTheme.accent } as React.CSSProperties : {}}
             >
-                <span className={`text-[13px] font-semibold transition-colors ${entry ? 'text-gray-500 text-[11px]' : 'text-[#2D2D2D]'} ${isCurrentMonth ? '' : 'text-[#bbb]'}`}>
+                {/* ตัวเลขวันที่ */}
+                <span className={`text-[13px] font-semibold transition-colors z-10 ${entry ? 'text-gray-500 text-[11px]' : 'text-[#2D2D2D]'} ${isCurrentMonth ? '' : 'text-[#bbb]'}`}>
                     {day}
                 </span>
+
+                {/* รูปอารมณ์ */}
                 {entry && (
                     <div 
                         className="w-full h-full mt-1 bg-contain bg-center bg-no-repeat drop-shadow-sm animate-[popIn_0.3s_ease]"
@@ -213,7 +208,6 @@ export default function MoodCalendar() {
     { score: 1, label: 'โกรธ', bg: 'bg-[#FFE5E5]', active: 'bg-[#FFD0D0] border-[#FF6B6B]' },
   ];
 
-  // ถ้ายังโหลดข้อมูลไลน์ไม่เสร็จ ให้ขึ้นหน้า Loading (ป้องกัน Error)
   if (!profile) {
      return <div className="min-h-screen w-full flex items-center justify-center bg-[#FFE5F1] text-[#E85D9A] font-bold text-xl">
          กำลังเชื่อมต่อ LINE... ⏳
@@ -225,7 +219,6 @@ export default function MoodCalendar() {
         className={`min-h-screen w-full flex flex-col items-center py-10 px-4 transition-colors duration-500 ${mitr.className} ${fredoka.variable}`}
         style={{ backgroundColor: currentTheme.bg }} 
     >
-      {/* 👤 Header แสดงรูปโปรไฟล์ */}
       <div className="w-full max-w-[420px] flex items-center gap-3 mb-6">
          {profile?.pictureUrl && (
              <img src={profile.pictureUrl} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" alt="Profile" />
