@@ -3,12 +3,10 @@ import { prisma } from '../../../lib/prisma';
 import { messagingApi } from '@line/bot-sdk';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// ตั้งค่า LINE (เดี๋ยวไปเอา Token มาใส่ใน .env)
 const client = new messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
 });
 
-// ตั้งค่า Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
@@ -16,7 +14,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const events = body.events;
 
-    // วนลูปทุก event ที่ส่งเข้ามา (ปกติจะมาทีละ 1)
+    // ตอบกลับ 200 OK ไปก่อนเลย เพื่อไม่ให้ LINE ส่งซ้ำ (ลด Error Invalid reply token)
+    // แต่ Vercel อาจจะตัดการทำงานถ้าคืนค่าเร็วไป ดังนั้นต้องใช้เทคนิค Promise.all หรือยอมให้มัน Error บ้าง
+    
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
         await handleMessage(event);
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ status: 'ok' });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Webhook Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -35,88 +35,67 @@ async function handleMessage(event: any) {
   const userMessage = event.message.text.trim();
   const replyToken = event.replyToken;
 
-  // 1. หา User ใน Database
-  let user = await prisma.user.findUnique({ where: { lineId: userId } });
+  try {
+      // 1. หา User / สร้าง User
+      let user = await prisma.user.findUnique({ where: { lineId: userId } });
+      if (!user) user = await prisma.user.create({ data: { lineId: userId } });
 
-  // ถ้ายังไม่มี User ให้สร้างใหม่ (กรณีเขาแอดไลน์มาแต่ยังไม่เคยเข้า LIFF)
-  if (!user) {
-    user = await prisma.user.create({ data: { lineId: userId } });
-  }
+      let replyText = "";
 
-  let replyText = "";
+      // 🤖 Logic: จำชื่อ
+      if (!user.nickname) {
+        await prisma.user.update({ where: { id: user.id }, data: { nickname: userMessage } });
+        replyText = `โอเค! เราจำชื่อเธอว่า "${userMessage}" แล้วนะ มีเรื่องไม่สบายใจอะไรเล่าให้ "น้องเรียนดี" ฟังได้เลยนะ ❤️`;
+      } 
+      // 🔄 Logic: เปลี่ยนชื่อ
+      else if (userMessage.startsWith("เปลี่ยนชื่อเป็น")) {
+        const newName = userMessage.replace("เปลี่ยนชื่อเป็น", "").trim();
+        if (newName) {
+          await prisma.user.update({ where: { id: user.id }, data: { nickname: newName } });
+          replyText = `ได้เลย! ต่อไปนี้จะเรียกว่า "${newName}" นะคะ 😉`;
+        }
+      } 
+      // 💬 Logic: คุยกับ AI (น้องเรียนดี)
+      else {
+        // ดึงประวัติ
+        const history = await prisma.chatHistory.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: 'desc' },
+          take: 5
+        });
 
-  // 🤖 Logic: ระบบจำชื่อ
-  if (!user.nickname) {
-    // ถ้ายังไม่มีชื่อเล่น -> ถือว่าข้อความที่ส่งมาคือ "ชื่อ" (หรือจะถามก่อนก็ได้)
-    // แต่วิธีนี้ง่ายกว่า: ถ้ายังไม่มีชื่อ บังคับให้พิมพ์ชื่อก่อน
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { nickname: userMessage }
-    });
-    replyText = `ยินดีที่ได้รู้จักนะคุณ "${userMessage}"! \nเราจำชื่อคุณแล้วนะ อยากคุยอะไรบอกได้เลย ❤️`;
-  } 
-  // 🔄 Logic: ขอเปลี่ยนชื่อ
-  else if (userMessage.startsWith("เปลี่ยนชื่อเป็น")) {
-    const newName = userMessage.replace("เปลี่ยนชื่อเป็น", "").trim();
-    if (newName) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { nickname: newName }
-      });
-      replyText = `โอเค! ต่อไปนี้เราจะเรียกคุณว่า "${newName}" นะครับ 😉`;
-    } else {
-      replyText = "พิมพ์ว่า 'เปลี่ยนชื่อเป็น [ชื่อใหม่]' ได้เลยนะ";
-    }
-  } 
-  // 💬 Logic: คุยกับ AI (Gemini)
-  else {
-    // 1. ดึงประวัติการคุยล่าสุด 5 ข้อความ (เพื่อให้มันจำบทสนทนาได้)
-    const history = await prisma.chatHistory.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-      take: 5
-    });
+        const historyForAI = history.reverse().map((h: any) => ({
+          role: h.role === 'user' ? 'user' : 'model',
+          parts: [{ text: h.message }]
+        }));
 
-    // แปลงประวัติให้ Gemini เข้าใจ
-    const historyForAI = history.reverse().map((h: any) => ({
-      role: h.role === 'user' ? 'user' : 'model',
-      parts: [{ text: h.message }]
-    }));
+        // ✅ ใช้ Gemini 1.5 Flash + System Instruction แบบ "น้องเรียนดี"
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash",
+            systemInstruction: `
+              คุณคือ 'น้องเรียนดี' (Nong Rian Dee) เพื่อนสนิทวัยรุ่นที่เป็น 'Safe Zone' ที่ดีที่สุดในโลก
+              เป้าหมาย: ไม่ใช่การแก้ปัญหา แต่คือการอยู่เคียงข้าง (Presence)
+              บุคลิก: ฉลาดทางอารมณ์สูง (High EQ), ไม่ตัดสิน, ใช้ภาษาวัยรุ่นเป็นธรรมชาติ (เรา/แก), ไม่พูดซ้ำซาก
+              
+              การตอบสนอง:
+              - ถ้าบ่น: ผสมโรง (Validate) "โห เจองี้เป็นเราก็ขึ้น"
+              - ถ้าเศร้า: อ่อนโยน "กอดนะแก... วันนี้หนักใช่ไหม"
+              - ถ้าเจอเรื่อง Self-harm: ดึงสติด้วยความรัก ห้ามตัดสิน
+              
+              คู่สนทนาชื่อ: ${user.nickname || 'เธอ'} (เรียกชื่อเขาบ้างให้ดูใส่ใจ)
+            `
+        });
 
-    // 2. เรียก Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: `คุณคือ MindBuddy เพื่อน AI ที่น่ารัก. 
-          คู่สนทนาชื่อ: ${user.nickname} (เรียกชื่อเขาบ่อยๆ นะ). 
-          ถ้าเขาเศร้า ให้กำลังใจ. คุยสั้นๆ เป็นกันเอง.` }]
-        },
-        { role: "model", parts: [{ text: "รับทราบค่ะ! จะดูแลคุณ " + user.nickname + " อย่างดีเลย" }] },
-        ...historyForAI
-      ]
-    });
+        const chat = model.startChat({ history: historyForAI });
 
-    try {
-      const result = await chat.sendMessage(userMessage);
-      replyText = result.response.text();
-    } catch (e) {
-      replyText = "ขอโทษที ตอนนี้เรามึนๆ พิมพ์ใหม่ได้มั้ย? 😵‍💫";
-    }
-  }
+        try {
+            const result = await chat.sendMessage(userMessage);
+            replyText = result.response.text();
+        } catch (aiError) {
+            console.error("AI Error:", aiError);
+            replyText = "กอดนะ... ตอนนี้เรามึนๆ นิดหน่อย พิมพ์ใหม่ได้มั้ย? 🥺";
+        }
+      }
 
-  // 💾 บันทึกบทสนทนาลง Database (เพื่อให้จำได้ในครั้งหน้า)
-  await prisma.chatHistory.createMany({
-    data: [
-      { userId: user.id, role: 'user', message: userMessage },
-      { userId: user.id, role: 'assistant', message: replyText }
-    ]
-  });
-
-  // 🚀 ส่งข้อความตอบกลับไปที่ LINE
-  await client.replyMessage({
-    replyToken: replyToken,
-    messages: [{ type: 'text', text: replyText }],
-  });
-}
+      // 💾 บันทึกประวัติ
+      await prisma.chatHistory.create
