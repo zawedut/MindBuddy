@@ -2,6 +2,10 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Mitr } from 'next/font/google';
+
+const mitr = Mitr({ weight: ['400', '500', '600', '700'], subsets: ['thai'], variable: '--font-mitr' });
 
 interface Announcement {
   id: string;
@@ -24,7 +28,7 @@ const FlashInfo = () => {
     {
       id: 'modal1',
       badge: '🔥 HOT',
-      badgeColor: 'from-pink-400 to-red-400',
+      badgeColor: 'from-pink-400 to-rose-400',
       image: '/images/info1.jpg',
       title: '🎓 Google AI Pro ฟรี 1 ปีเต็ม สำหรับนักเรียน นิสิต นักศึกษา',
       description:
@@ -41,7 +45,7 @@ const FlashInfo = () => {
     {
       id: 'modal2',
       badge: '💚 24/7',
-      badgeColor: 'from-green-400 to-emerald-400',
+      badgeColor: 'from-teal-400 to-cyan-400',
       image: '/images/info2.jpg',
       title: '💚 สายด่วนสุขภาพจิต 1300 โทรฟรี 24 ชั่วโมง',
       description:
@@ -70,139 +74,142 @@ const FlashInfo = () => {
     document.body.style.overflow = 'auto';
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      closeModal();
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-300 to-blue-400 bg-[length:400%_400%] animate-[gradientShift_15s_ease_infinite] py-5 px-4">
-      <div className="max-w-[480px] mx-auto">
-        {/* Premium Header */}
-        <div className="text-center mb-6 animate-[fadeInDown_0.8s_ease]">
-          <div className="inline-block bg-gradient-to-r from-purple-500 to-purple-700 text-white py-2 px-5 rounded-[20px] text-[13px] font-semibold tracking-wider mb-3 shadow-lg animate-[pulse_2s_ease_infinite]">
-            ✨ FLASH INFO
+    <div className={`min-h-screen bg-gradient-to-br from-[#F8F5FF] via-[#FFF5F8] to-[#F0FAFF] ${mitr.className}`}>
+      {/* Decorative */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-purple-200/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-200/30 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 max-w-xl mx-auto px-4 py-8">
+        {/* Back Button */}
+        <Link href="/" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-600 transition-colors mb-6">
+          <span>←</span>
+          <span className="text-sm font-medium">กลับหน้าหลัก</span>
+        </Link>
+
+        {/* Header */}
+        <header className="text-center mb-10 animate-[fadeIn_0.6s_ease-out]">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-200 to-pink-200 rounded-2xl mb-4 shadow-lg">
+            <span className="text-3xl">📢</span>
           </div>
-          <h1 className="font-['Kanit'] text-[32px] font-extrabold bg-gradient-to-r from-purple-500 via-purple-700 to-pink-400 bg-clip-text text-transparent mb-2 tracking-tight">
-            Mind Buddy
-          </h1>
-          <div className="bg-white/95 backdrop-blur-md py-3 px-5 rounded-2xl text-purple-600 text-sm font-medium shadow-lg border-2 border-purple-200">
-            🦆 อัพเดทข่าวสาร ความรู้ เคล็ดลับดีดี พร้อมดูแลจิตใจน้องๆ ทุกวัน
+          <h1 className="text-3xl font-bold text-gray-700 mb-2">Flash Info</h1>
+          <p className="text-purple-400">ข่าวสาร ความรู้ และเคล็ดลับดีดี</p>
+
+          <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-white/70 backdrop-blur-sm rounded-full border border-purple-100">
+            <span>🦆</span>
+            <span className="text-sm text-purple-500">อัพเดทพร้อมดูแลจิตใจน้องๆ ทุกวัน</span>
           </div>
+        </header>
+
+        {/* About Card */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 mb-8 border border-purple-100 shadow-sm animate-[fadeInUp_0.6s_ease-out_0.1s_both]">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-3xl">💜</span>
+            <h3 className="text-lg font-semibold text-gray-700">เราคือเพื่อนที่ดีของคุณ</h3>
+          </div>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            <strong className="text-purple-500">Mind Buddy</strong> คือแพลตฟอร์มที่รวบรวมข่าวสาร ความรู้ และการดูแลสุขภาพจิตไว้ในที่เดียว
+            พร้อมมอบข้อมูลที่เป็นประโยชน์และทันสมัยให้กับทุกคน 🌟
+          </p>
         </div>
 
-        {/* Info Banner */}
-        <div className="bg-white/95 backdrop-blur-md rounded-[20px] p-5 mb-6 shadow-xl border-2 border-purple-200 animate-[fadeInUp_0.8s_ease_0.2s_both]">
-          <div className="flex items-center mb-4">
-            <span className="text-4xl mr-3">💙</span>
-            <h3 className="font-['Kanit'] text-lg font-bold text-purple-600">เราคือเพื่อนที่ดีของคุณ</h3>
-          </div>
-          <div className="text-sm text-gray-600 leading-relaxed">
-            <p>
-              <strong>Mind Buddy</strong> คือแพลตฟอร์มที่รวบรวมข่าวสาร ความรู้ และการดูแลสุขภาพจิตไว้ในที่เดียว
-              พร้อมมอบข้อมูลที่เป็นประโยชน์และทันสมัยให้กับทุกคน 🌟
-            </p>
-          </div>
-        </div>
-
-        {/* Announcements Section */}
-        <h2 className="font-['Kanit'] text-xl font-bold text-white mb-4 flex items-center drop-shadow-lg">
-          <span className="w-1 h-6 bg-gradient-to-b from-pink-400 to-blue-400 mr-2.5 rounded"></span>
+        {/* Section Title */}
+        <h2 className="text-lg font-semibold text-gray-600 mb-4 flex items-center gap-2">
+          <span className="w-1 h-5 bg-gradient-to-b from-purple-400 to-pink-400 rounded-full" />
           📢 ประกาศล่าสุด
         </h2>
 
-        <div className="flex flex-col gap-5 mb-6">
+        {/* Announcements */}
+        <div className="space-y-5 mb-8">
           {announcements.map((announcement, index) => (
             <div
               key={announcement.id}
               onClick={() => openModal(announcement.id)}
-              className="bg-white/95 rounded-3xl overflow-hidden shadow-xl border-2 border-white/50 cursor-pointer transition-all duration-400 hover:shadow-2xl hover:-translate-y-2 active:scale-[0.98] animate-[fadeInUp_0.6s_ease_both] relative"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className="bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden border border-white shadow-lg hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all duration-300 animate-[fadeInUp_0.6s_ease-out_both]"
+              style={{ animationDelay: `${(index + 1) * 0.1}s` }}
             >
-              <div
-                className={`absolute top-4 right-4 bg-gradient-to-r ${announcement.badgeColor} text-white py-1.5 px-3.5 rounded-xl text-[11px] font-bold z-10 shadow-lg tracking-wide`}
-              >
-                {announcement.badge}
-              </div>
+              {/* Badge */}
+              <div className="relative">
+                <div
+                  className={`absolute top-4 right-4 bg-gradient-to-r ${announcement.badgeColor} text-white py-1.5 px-3 rounded-xl text-xs font-bold z-10 shadow-md`}
+                >
+                  {announcement.badge}
+                </div>
 
-              <div className="w-full aspect-video relative bg-gradient-to-br from-blue-50 to-blue-100">
-                <Image
-                  src={announcement.image}
-                  alt={announcement.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 480px"
-                />
+                <div className="w-full aspect-video relative bg-gradient-to-br from-purple-50 to-pink-50">
+                  <Image
+                    src={announcement.image}
+                    alt={announcement.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 480px"
+                  />
+                </div>
               </div>
 
               <div className="p-5">
-                <h3 className="font-['Kanit'] text-xl font-bold bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-transparent mb-3 leading-snug">
+                <h3 className="text-lg font-bold text-gray-700 mb-2 leading-snug">
                   {announcement.title}
                 </h3>
-                <p className="text-sm text-gray-600 leading-relaxed mb-3">{announcement.description}</p>
-                <div className="inline-flex items-center text-[13px] font-semibold text-purple-600 gap-1">
+                <p className="text-sm text-gray-500 leading-relaxed mb-3">{announcement.description}</p>
+                <span className="inline-flex items-center text-sm font-medium text-purple-500">
                   อ่านรายละเอียด →
-                </div>
+                </span>
               </div>
             </div>
           ))}
 
           {/* Coming Soon */}
-          <div className="bg-gradient-to-br from-pink-400/20 to-blue-400/20 border-2 border-dashed border-white/80 rounded-3xl min-h-[200px] flex flex-col items-center justify-center animate-[breathe_3s_ease_infinite]">
-            <div className="text-6xl mb-3 grayscale-[0.3]">🎪</div>
-            <div className="font-['Kanit'] text-xl text-white/90 font-bold drop-shadow-md">Coming Soon</div>
-            <div className="text-sm text-white/70 mt-1">เร็วๆ นี้</div>
+          <div className="bg-white/40 border-2 border-dashed border-purple-200 rounded-3xl py-12 flex flex-col items-center justify-center">
+            <span className="text-5xl mb-3">🎪</span>
+            <p className="text-lg font-semibold text-purple-400">Coming Soon</p>
+            <p className="text-sm text-gray-400">เร็วๆ นี้</p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="bg-white/95 backdrop-blur-md rounded-[20px] p-5 text-center border-2 border-white/50 shadow-xl">
-          <p className="bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-transparent text-sm leading-relaxed font-medium">
-            💙 <strong>Mind Buddy by น้องเรียนดี</strong>
+        <footer className="text-center bg-white/70 backdrop-blur-sm rounded-2xl p-5 border border-purple-100">
+          <p className="text-sm text-purple-500 leading-relaxed">
+            💜 <strong>Mind Buddy by น้องเรียนดี</strong>
             <br />
             พร้อมอัพเดทข่าวสารและความรู้ดีดีให้เสมอ
             <br />
-            ติดตามเราได้ที่ LINE Official Account 🌈
-            <br />
             <strong>เพราะทุกคนสำคัญ ทุกความรู้สึกมีค่า</strong> ✨
           </p>
-        </div>
+        </footer>
       </div>
 
-      {/* Modals */}
+      {/* Modal */}
       {announcements.map((announcement) => (
         <div
           key={`modal-${announcement.id}`}
-          className={`fixed inset-0 bg-black/85 z-[1000] backdrop-blur-md flex items-center justify-center p-5 transition-opacity duration-300 ${
-            activeModal === announcement.id ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-          onClick={handleBackdropClick}
+          className={`fixed inset-0 bg-black/50 z-50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 ${activeModal === announcement.id ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          onClick={closeModal}
         >
           <div
-            className={`bg-white rounded-3xl max-w-[500px] w-full max-h-[90vh] overflow-y-auto relative shadow-2xl transition-all duration-500 ${
-              activeModal === announcement.id
-                ? 'translate-y-0 scale-100'
-                : 'translate-y-24 scale-90'
-            }`}
+            className={`bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto relative shadow-2xl transition-all duration-300 ${activeModal === announcement.id ? 'translate-y-0 scale-100' : 'translate-y-8 scale-95'
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white py-5 px-5 rounded-t-3xl flex justify-between items-center z-10 shadow-md">
-              <h2 className="font-['Kanit'] text-xl font-bold tracking-tight">
-                {announcement.title.split(' ').slice(0, 3).join(' ')}
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-purple-400 to-pink-400 text-white py-4 px-5 rounded-t-3xl flex justify-between items-center z-10">
+              <h2 className="text-lg font-bold truncate pr-4">
+                {announcement.title.split(' ').slice(0, 4).join(' ')}
               </h2>
               <button
                 onClick={closeModal}
-                className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center text-3xl font-light transition-all hover:rotate-90"
+                className="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-xl transition-all"
               >
                 ×
               </button>
             </div>
 
-            {/* Modal Body */}
+            {/* Body */}
             <div className="p-6">
-              <div className="w-full rounded-2xl mb-5 shadow-lg overflow-hidden relative aspect-video">
+              <div className="w-full rounded-2xl mb-5 shadow-md overflow-hidden relative aspect-video">
                 <Image
                   src={announcement.modalContent.image}
                   alt={announcement.title}
@@ -213,81 +220,27 @@ const FlashInfo = () => {
               </div>
 
               {announcement.modalContent.description.map((desc, i) => (
-                <p key={i} className="text-[15px] text-gray-600 leading-relaxed mb-4">
+                <p key={i} className="text-gray-600 leading-relaxed mb-3">
                   {desc}
                 </p>
               ))}
 
-              {announcement.modalContent.highlights &&
-                announcement.modalContent.highlights.map((highlight, i) => (
-                  <div
-                    key={i}
-                    className="bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-400 p-4 rounded-xl my-4"
-                  >
-                    <p className="font-semibold text-blue-900 text-base m-0">{highlight}</p>
-                  </div>
-                ))}
+              {announcement.modalContent.highlights?.map((highlight, i) => (
+                <div
+                  key={i}
+                  className="bg-gradient-to-r from-teal-50 to-cyan-50 border-l-4 border-teal-400 p-4 rounded-xl my-4"
+                >
+                  <p className="font-semibold text-teal-700">{highlight}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       ))}
 
-      <style jsx>{`
-        @keyframes gradientShift {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-
-        @keyframes pulse {
-          0%,
-          100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.05);
-          }
-        }
-
-        @keyframes fadeInDown {
-          from {
-            opacity: 0;
-            transform: translateY(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes breathe {
-          0%,
-          100% {
-            opacity: 0.6;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.02);
-          }
-        }
+      <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );

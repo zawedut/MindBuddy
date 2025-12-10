@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Mitr } from 'next/font/google';
+import Link from 'next/link';
+
+const mitr = Mitr({ weight: ['400', '500', '600', '700'], subsets: ['thai'], variable: '--font-mitr' });
 
 interface HealthPlace {
   id: number;
@@ -20,9 +24,6 @@ const HealthDirectory = () => {
   const [selectedPlace, setSelectedPlace] = useState<HealthPlace | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
-  const [modalTransform, setModalTransform] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const startYRef = useRef(0);
 
   const healthData: HealthPlace[] = [
     { id: 1, type: 'clinic', region: 'bkk', name: 'คลินิกเวชกรรมแพทย์นพดล', loc: 'บางคอแหลม', addr: '549/82 ถ.เจริญราษฎร์ (ห่าง รร.มณเฑียร 400ม.)', time: 'จ-พฤ, ส 17.30-19.30 | อา 8.30-10.30', tel: '0655044939' },
@@ -33,8 +34,6 @@ const HealthDirectory = () => {
     { id: 6, type: 'clinic', region: 'bkk', name: 'กายใจคลินิก (Body and Mind)', loc: 'ปทุมวัน', addr: 'จัตุรัสจามจุรี ชั้น 2', time: 'จ-ศ 16.30-20.00', tel: '0933322511' },
     { id: 7, type: 'clinic', region: 'bkk', name: 'เติมสุขคลินิก', loc: 'ประเวศ', addr: '34 ซ.พัฒนาการ 61', time: 'อ-ศ 17-19 | ส-อา 9-18', tel: '0959509050' },
     { id: 8, type: 'clinic', region: 'bkk', name: 'คลินิกจิตเวช รพ.บ้านแพ้ว (สาทร)', loc: 'สาทร', addr: 'ตึก TPI ถ.จันทน์ ชั้น 10', time: 'ศ 09-14 | ส 09.30-16', tel: '022872228' },
-    { id: 9, type: 'clinic', region: 'bkk', name: 'Joy of Minds Clinic', loc: 'อโศก/สายไหม', addr: 'สาขา 1: อโศกทาวเวอร์ | สาขา 2: สายไหม', time: '-' },
-    { id: 10, type: 'clinic', region: 'bkk', name: 'Sunshine Mind Clinic', loc: 'บางเขน', addr: 'Platinum Place วัชรพล', time: 'จิตเวชเด็ก', tel: '0805535212' },
     { id: 50, type: 'hospital', region: 'bkk', name: 'สถาบันจิตเวชสมเด็จเจ้าพระยา', loc: 'กทม', addr: 'เฉพาะทางจิตเวช', time: '24 ชม.', tel: '024370200' },
     { id: 51, type: 'hospital', region: 'bkk', name: 'รพ.จุฬาลงกรณ์', loc: 'กทม', addr: 'แผนกจิตเวช', time: 'เวลาราชการ', tel: '022564000' },
     { id: 52, type: 'hospital', region: 'bkk', name: 'รพ.ศิริราช', loc: 'กทม', addr: 'แผนกจิตเวช', time: 'เวลาราชการ', tel: '024197000' },
@@ -50,14 +49,12 @@ const HealthDirectory = () => {
       currentFilter === 'all' ||
       (currentFilter === 'clinic' && place.type === 'clinic') ||
       (currentFilter === 'hospital' && place.type === 'hospital') ||
-      (currentFilter === 'bkk' && place.region === 'bkk') ||
-      (currentFilter === 'perim' && place.region === 'perim') ||
       (currentFilter === 'fav' && favorites.includes(place.id));
-    
+
     const matchText =
       place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       place.loc.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     return matchType && matchText;
   });
 
@@ -66,10 +63,10 @@ const HealthDirectory = () => {
     const newFavorites = favorites.includes(id)
       ? favorites.filter((fid) => fid !== id)
       : [...favorites, id];
-    
+
     setFavorites(newFavorites);
     localStorage.setItem('psFavs', JSON.stringify(newFavorites));
-    showToast(favorites.includes(id) ? 'ลบแล้ว' : 'บันทึกแล้ว');
+    showToast(favorites.includes(id) ? 'ลบออกแล้ว' : 'บันทึกแล้ว 💜');
   };
 
   const showToast = (message: string) => {
@@ -80,7 +77,6 @@ const HealthDirectory = () => {
   const openModal = (place: HealthPlace) => {
     setSelectedPlace(place);
     setIsModalOpen(true);
-    setModalTransform(0);
   };
 
   const closeModal = () => {
@@ -88,221 +84,188 @@ const HealthDirectory = () => {
     setTimeout(() => setSelectedPlace(null), 300);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startYRef.current = e.touches[0].clientY;
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startYRef.current;
-    if (diff > 0) {
-      setModalTransform(diff);
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    const diff = e.changedTouches[0].clientY - startYRef.current;
-    if (diff > 100) {
-      closeModal();
-    } else {
-      setModalTransform(0);
-    }
-  };
+  const filters = [
+    { id: 'all', label: 'ทั้งหมด', icon: '🌐' },
+    { id: 'fav', label: 'ที่บันทึก', icon: '💜' },
+    { id: 'clinic', label: 'คลินิก', icon: '🏥' },
+    { id: 'hospital', label: 'โรงพยาบาล', icon: '🏨' },
+  ];
 
   return (
-    <div className="w-full max-w-[500px] mx-auto relative font-['Prompt'] bg-gradient-to-br from-gray-50 to-gray-100 rounded-[30px] shadow-2xl overflow-hidden border border-gray-50 h-[650px] flex flex-col">
-      {/* Header */}
-      <div className="bg-white px-5 py-5 pb-2.5 rounded-b-[30px] shadow-md z-10 flex-shrink-0">
-        <div className="text-center mb-4">
-          <h2 className="text-[1.3rem] font-bold text-[#E27D60] mb-1">Health Directory</h2>
-          <p className="text-[0.8rem] text-gray-500">ค้นหาสถานพยาบาล & คลินิก</p>
-        </div>
+    <div className={`min-h-screen bg-gradient-to-br from-[#F0FAFF] via-[#F8F5FF] to-[#FFF5F8] ${mitr.className}`}>
+      {/* Decorative */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-20 right-10 w-72 h-72 bg-teal-200/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-purple-200/20 rounded-full blur-3xl" />
+      </div>
 
-        <div className="relative mb-2.5">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 text-[0.9rem]">🔍</span>
+      <div className="relative z-10 max-w-2xl mx-auto px-4 py-8">
+        {/* Back Button */}
+        <Link href="/" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-600 transition-colors mb-6">
+          <span>←</span>
+          <span className="text-sm font-medium">กลับหน้าหลัก</span>
+        </Link>
+
+        {/* Header */}
+        <header className="text-center mb-8 animate-[fadeIn_0.6s_ease-out]">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-200 to-cyan-200 rounded-2xl mb-4 shadow-lg">
+            <span className="text-3xl">🏥</span>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-700 mb-2">คลินิกสุขภาพจิต</h1>
+          <p className="text-purple-400">ค้นหาสถานพยาบาลและคลินิกใกล้คุณ</p>
+        </header>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           <input
             type="text"
-            placeholder="ค้นหาชื่อ, เขต..."
+            placeholder="ค้นหาชื่อ หรือ เขต..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full py-2.5 px-4 pl-9 rounded-full border-2 border-gray-100 bg-gray-50 text-[0.9rem] text-gray-700 focus:border-[#FFB7B2] focus:bg-white transition-all outline-none"
+            className="w-full py-3.5 px-12 rounded-2xl bg-white/70 backdrop-blur-sm border-2 border-transparent focus:border-teal-300 text-gray-700 placeholder-gray-400 shadow-sm transition-all outline-none"
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide">
-          {[
-            { id: 'all', label: 'ทั้งหมด' },
-            { id: 'fav', label: '❤️ ที่ชอบ' },
-            { id: 'clinic', label: '🏥 คลินิก' },
-            { id: 'hospital', label: '🏨 โรงพยาบาล' },
-            { id: 'bkk', label: '📍 กทม.' },
-            { id: 'perim', label: '📍 ปริมณฑล' },
-          ].map((filter) => (
+        {/* Filters */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+          {filters.map((filter) => (
             <button
               key={filter.id}
               onClick={() => setCurrentFilter(filter.id)}
-              className={`whitespace-nowrap py-1.5 px-3 rounded-[20px] text-[0.75rem] font-medium transition-all ${
-                currentFilter === filter.id
-                  ? 'bg-[#E27D60] text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
+              className={`flex items-center gap-1.5 whitespace-nowrap py-2.5 px-4 rounded-full text-sm font-medium transition-all ${currentFilter === filter.id
+                  ? 'bg-gradient-to-r from-teal-400 to-cyan-400 text-white shadow-lg shadow-teal-200/50'
+                  : 'bg-white/70 text-gray-600 hover:bg-white'
+                }`}
             >
-              {filter.label}
+              <span>{filter.icon}</span>
+              <span>{filter.label}</span>
             </button>
           ))}
         </div>
-      </div>
 
-      {/* List Area */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="flex justify-between mb-2.5 text-[0.8rem] text-gray-500">
-          <span>รายการทั้งหมด ({filteredData.length})</span>
-        </div>
+        {/* Results Count */}
+        <p className="text-sm text-gray-400 mb-4">พบ {filteredData.length} สถานที่</p>
 
-        {filteredData.length === 0 ? (
-          <div className="text-center py-10 text-[0.9rem] text-gray-400">ไม่พบข้อมูล</div>
-        ) : (
-          filteredData.map((place) => (
-            <div
-              key={place.id}
-              onClick={() => openModal(place)}
-              className="bg-white rounded-[18px] p-4 mb-2.5 shadow-sm border border-gray-50 cursor-pointer relative transition-all hover:shadow-md active:scale-[0.98]"
-            >
-              <div className="flex justify-between items-center mb-1">
-                <span
-                  className={`text-[0.6rem] px-2 py-0.5 rounded-md font-bold uppercase ${
-                    place.type === 'hospital'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-50 text-[#E27D60]'
-                  }`}
-                >
-                  {place.type === 'hospital' ? 'HOSPITAL' : 'CLINIC'}
-                </span>
-                <button
-                  onClick={(e) => toggleFavorite(place.id, e)}
-                  className={`text-xl transition-all ${
-                    favorites.includes(place.id) ? 'text-red-500 scale-110' : 'text-gray-300'
-                  }`}
-                >
-                  ❤️
-                </button>
-              </div>
-              <div className="text-[0.95rem] font-semibold text-gray-700 mb-1 leading-snug">
-                {place.name}
-              </div>
-              <div className="text-[0.8rem] text-gray-500 flex items-center gap-1">
-                📍 {place.loc}
-              </div>
-              <div className="absolute right-4 bottom-4 text-[0.8rem] text-gray-300">➜</div>
+        {/* List */}
+        <div className="space-y-3">
+          {filteredData.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <span className="text-4xl mb-4 block">🔍</span>
+              ไม่พบข้อมูล
             </div>
-          ))
-        )}
+          ) : (
+            filteredData.map((place, index) => (
+              <div
+                key={place.id}
+                onClick={() => openModal(place)}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-white hover:shadow-lg hover:border-teal-200 cursor-pointer transition-all duration-300 animate-[fadeInUp_0.4s_ease-out_both]"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${place.type === 'hospital'
+                      ? 'bg-teal-100 text-teal-600'
+                      : 'bg-purple-100 text-purple-600'
+                    }`}>
+                    {place.type === 'hospital' ? '🏨 โรงพยาบาล' : '🏥 คลินิก'}
+                  </span>
+                  <button
+                    onClick={(e) => toggleFavorite(place.id, e)}
+                    className={`text-xl transition-transform hover:scale-125 ${favorites.includes(place.id) ? 'text-purple-500' : 'text-gray-300'
+                      }`}
+                  >
+                    {favorites.includes(place.id) ? '💜' : '🤍'}
+                  </button>
+                </div>
+                <h3 className="font-semibold text-gray-700 mb-1">{place.name}</h3>
+                <p className="text-sm text-gray-500 flex items-center gap-1">
+                  <span>📍</span> {place.loc}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Modal Overlay */}
-      {isModalOpen && (
+      {/* Modal */}
+      {isModalOpen && selectedPlace && (
         <div
-          className="fixed inset-0 bg-black/40 z-[99999] backdrop-blur-sm transition-opacity duration-300"
+          className="fixed inset-0 bg-black/40 z-50 backdrop-blur-sm flex items-end justify-center animate-[fadeIn_0.2s_ease-out]"
           onClick={closeModal}
         >
           <div
-            className="fixed bottom-0 left-0 w-full bg-white rounded-t-[25px] px-5 py-2.5 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto transition-transform duration-400"
-            style={{
-              transform: `translateY(${modalTransform}px)`,
-              transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
-            }}
+            className="bg-white rounded-t-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto animate-[slideUp_0.3s_ease-out]"
             onClick={(e) => e.stopPropagation()}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
-            <div className="w-full h-10 flex justify-center items-center cursor-grab active:cursor-grabbing">
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            {/* Handle */}
+            <div className="sticky top-0 bg-white pt-3 pb-2 flex justify-center">
+              <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
             </div>
 
-            <div className="flex justify-between items-center mb-2.5">
-              <span
-                className={`text-[0.6rem] px-2 py-0.5 rounded-md font-bold uppercase ${
-                  selectedPlace?.type === 'hospital'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-50 text-[#E27D60]'
-                }`}
-              >
-                {selectedPlace?.type === 'hospital' ? 'HOSPITAL' : 'CLINIC'}
-              </span>
-              <button
-                onClick={() => selectedPlace && toggleFavorite(selectedPlace.id)}
-                className={`text-2xl transition-all ${
-                  selectedPlace && favorites.includes(selectedPlace.id)
-                    ? 'text-red-500 scale-110'
-                    : 'text-gray-300'
-                }`}
-              >
-                ❤️
-              </button>
-            </div>
-
-            <h2 className="text-[1.2rem] font-bold text-gray-800 mb-1">{selectedPlace?.name}</h2>
-            <p className="text-[0.85rem] text-gray-500 mb-4">📍 {selectedPlace?.loc}</p>
-
-            <div className="w-full h-[180px] rounded-2xl bg-gray-200 mb-5 overflow-hidden relative">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-400 text-[0.8rem]">
-                กำลังโหลด...
-              </div>
-              <iframe
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(
-                  selectedPlace?.name + ' ' + selectedPlace?.loc
-                )}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                className="w-full h-full border-0"
-                loading="lazy"
-              />
-            </div>
-
-            <div className="text-[0.7rem] text-[#E27D60] font-bold mb-1.5 uppercase">ที่อยู่ & รายละเอียด</div>
-            <div className="text-[0.9rem] text-gray-600 leading-relaxed mb-4">{selectedPlace?.addr}</div>
-
-            <div className="text-[0.7rem] text-[#E27D60] font-bold mb-1.5 uppercase">เวลาทำการ</div>
-            <div className="text-[0.9rem] text-gray-600 leading-relaxed mb-4">{selectedPlace?.time}</div>
-
-            <div className="grid grid-cols-2 gap-2.5 mt-5">
-              {selectedPlace?.tel && (
-                <a
-                  href={`tel:${selectedPlace.tel}`}
-                  className="py-3 px-4 rounded-xl text-center font-semibold text-[0.9rem] bg-[#FFB7B2] text-white hover:bg-[#E27D60] transition-all"
+            <div className="px-6 pb-8">
+              {/* Badge */}
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${selectedPlace.type === 'hospital'
+                    ? 'bg-teal-100 text-teal-600'
+                    : 'bg-purple-100 text-purple-600'
+                  }`}>
+                  {selectedPlace.type === 'hospital' ? '🏨 โรงพยาบาล' : '🏥 คลินิก'}
+                </span>
+                <button
+                  onClick={() => toggleFavorite(selectedPlace.id)}
+                  className="text-2xl"
                 >
-                  📞 โทร
+                  {favorites.includes(selectedPlace.id) ? '💜' : '🤍'}
+                </button>
+              </div>
+
+              <h2 className="text-2xl font-bold text-gray-700 mb-2">{selectedPlace.name}</h2>
+              <p className="text-gray-500 mb-6">📍 {selectedPlace.loc}</p>
+
+              {/* Map */}
+              <div className="w-full h-48 rounded-2xl bg-gray-100 mb-6 overflow-hidden">
+                <iframe
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                    selectedPlace.name + ' ' + selectedPlace.loc
+                  )}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                />
+              </div>
+
+              {/* Info */}
+              <div className="space-y-4 mb-6">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-1">📍 ที่อยู่</p>
+                  <p className="text-gray-700">{selectedPlace.addr}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-1">🕐 เวลาทำการ</p>
+                  <p className="text-gray-700">{selectedPlace.time}</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedPlace.tel && (
+                  <a
+                    href={`tel:${selectedPlace.tel}`}
+                    className="py-3.5 rounded-2xl text-center font-semibold bg-gradient-to-r from-teal-400 to-cyan-400 text-white shadow-lg shadow-teal-200/50"
+                  >
+                    📞 โทร
+                  </a>
+                )}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    selectedPlace.name + ' ' + selectedPlace.loc
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3.5 rounded-2xl text-center font-semibold bg-gradient-to-r from-purple-400 to-pink-400 text-white shadow-lg shadow-purple-200/50"
+                >
+                  🗺️ นำทาง
                 </a>
-              )}
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  selectedPlace?.name + ' ' + selectedPlace?.loc
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-3 px-4 rounded-xl text-center font-semibold text-[0.9rem] bg-green-100 text-green-700 hover:bg-green-200 transition-all"
-              >
-                🗺️ นำทาง
-              </a>
-              <button
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: selectedPlace?.name,
-                      text: `สถานที่: ${selectedPlace?.name}`,
-                      url: window.location.href,
-                    });
-                  } else {
-                    showToast('คัดลอกลิงก์แล้ว');
-                  }
-                }}
-                className="col-span-2 py-3 px-4 rounded-xl text-center font-semibold text-[0.9rem] bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
-              >
-                📤 แชร์
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -310,27 +273,18 @@ const HealthDirectory = () => {
 
       {/* Toast */}
       {toast.show && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2.5 px-6 rounded-full text-[0.85rem] z-[100000] transition-all animate-[slideDown_0.4s_ease]">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2.5 px-6 rounded-full text-sm z-[100] animate-[slideDown_0.3s_ease-out]">
           {toast.message}
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes slideDown {
-          from {
-            transform: translateX(-50%) translateY(-100px);
-          }
-          to {
-            transform: translateX(-50%) translateY(0);
-          }
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+      <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slideDown { from { transform: translate(-50%, -100%); } to { transform: translate(-50%, 0); } }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   );
