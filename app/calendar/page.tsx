@@ -150,8 +150,8 @@ export default function MoodCalendar() {
       const entry = moods[key];
       const isToday = new Date().toDateString() === new Date(yearIndex, monthIndex, day).toDateString();
 
-      // ✅ ปรับ CSS Base: ใส่ overflow-hidden และจัด justify-start (ชิดบน) เสมอ ไม่ว่าจะมีอารมณ์หรือไม่
-      let cellClass = "relative w-full aspect-[1/1.4] rounded-2xl flex flex-col items-center justify-start pt-1.5 cursor-pointer border-2 transition-all duration-200 ease-out p-1 overflow-hidden ";
+      // 🔴 แก้: เปลี่ยน justify-start เป็น justify-center และลบ pt-1.5 ออก เพื่อให้รูปอยู่ตรงกลางแนวตั้ง
+      let cellClass = "relative w-full aspect-[1/1.4] rounded-2xl flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-200 ease-out p-1 overflow-hidden ";
 
       if (!isCurrentMonth) cellClass += "opacity-40 ";
 
@@ -171,18 +171,18 @@ export default function MoodCalendar() {
           className={cellClass}
           style={isToday && !entry ? { borderColor: currentTheme.accent, color: currentTheme.accent, '--tw-ring-color': currentTheme.accent } as React.CSSProperties : {}}
         >
-          {/* ตัวเลขวันที่ */}
-          <span className={`text-[13px] font-semibold transition-colors z-10 ${entry ? 'text-gray-500 text-[11px]' : 'text-[#2D2D2D]'} ${isCurrentMonth ? '' : 'text-[#bbb]'}`}>
+          {/* 🔴 แก้: ตัวเลขลอยมุมซ้ายบน ไม่ไปเบียดรูปลงข้างล่าง */}
+          <span className={`absolute top-1.5 left-2 text-[13px] font-semibold transition-colors z-10 ${entry ? 'text-gray-500 text-[11px]' : 'text-[#2D2D2D]'} ${isCurrentMonth ? '' : 'text-[#bbb]'}`}>
             {day}
           </span>
 
-          {/* รูปอารมณ์ - ปรับให้พอดีกับช่อง */}
+          {/* รูปอารมณ์ - อยู่ตรงกลาง cell */}
           {entry && (
             <div className="flex-1 w-full flex items-center justify-center p-0.5 animate-[popIn_0.3s_ease]">
               <img
                 src={getMoodImage(entry.score)}
                 alt="mood"
-                className="w-[80%] max-w-[42px] h-auto object-contain drop-shadow-sm"
+                className="w-[70%] max-w-[42px] h-auto object-contain drop-shadow-sm"
               />
             </div>
           )}
