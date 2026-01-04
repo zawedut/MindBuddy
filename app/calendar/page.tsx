@@ -151,14 +151,14 @@ export default function MoodCalendar() {
       const isToday = new Date().toDateString() === new Date(yearIndex, monthIndex, day).toDateString();
 
       // Base cell class
-      let cellClass = "relative w-full aspect-[1/1.4] rounded-2xl cursor-pointer border-2 transition-all duration-200 ease-out overflow-hidden ";
+      let cellClass = "relative w-full aspect-[1/1.4] rounded-2xl cursor-pointer border-2 transition-all duration-200 ease-out overflow-hidden flex flex-col items-center ";
 
       if (!isCurrentMonth) cellClass += "opacity-40 ";
 
       if (entry) {
-        cellClass += `${getMoodStyles(entry.score)} `;
+        cellClass += `${getMoodStyles(entry.score)} justify-start pt-1 `;
       } else {
-        cellClass += `bg-white border-transparent hover:-translate-y-1 ${currentTheme.cellHover} `;
+        cellClass += `bg-white border-transparent hover:-translate-y-1 ${currentTheme.cellHover} justify-center `;
         if (isToday) cellClass += `!bg-white ring-2 ring-offset-1 `;
       }
 
@@ -169,23 +169,23 @@ export default function MoodCalendar() {
           className={cellClass}
           style={isToday && !entry ? { borderColor: currentTheme.accent, color: currentTheme.accent, '--tw-ring-color': currentTheme.accent } as React.CSSProperties : {}}
         >
-          {/* ตัวเลขวัน - มุมซ้ายบน */}
+          {/* ตัวเลขวัน */}
           <span
-            className={`absolute top-1 left-1.5 text-[11px] font-bold z-20 leading-none
-              ${entry ? 'text-gray-600' : 'text-[#2D2D2D]'} 
+            className={`text-[11px] font-bold z-20 leading-none
+              ${entry ? 'text-gray-500' : 'text-[#2D2D2D] text-[13px]'} 
               ${isCurrentMonth ? '' : '!text-gray-400'}
             `}
           >
             {day}
           </span>
 
-          {/* รูปอารมณ์ - อยู่ตรงกลาง cell */}
+          {/* รูปอารมณ์ - อยู่ตรงกลาง */}
           {entry && (
-            <div className="absolute inset-0 flex items-center justify-center pt-2">
+            <div className="flex-1 w-full flex items-center justify-center">
               <img
                 src={getMoodImage(entry.score)}
                 alt="mood"
-                className="w-[65%] max-w-[38px] h-auto object-contain drop-shadow-md animate-[popIn_0.3s_ease]"
+                className="w-[70%] max-w-[40px] h-auto object-contain drop-shadow-md animate-[popIn_0.3s_ease]"
                 style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
               />
             </div>

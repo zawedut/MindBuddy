@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     if (score <= 3) {
       try {
         const completion = await typhoon.chat.completions.create({
-          model: 'typhoon-v2-70b-instruct',
+          model: 'typhoon-v2.5-30b-a3b-instruct',
           messages: [
             {
               role: 'system',
