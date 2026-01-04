@@ -1,30 +1,75 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma'; // เช็คว่า import ถูก path
+import { prisma } from '../../../lib/prisma';
 import { messagingApi } from '@line/bot-sdk';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from 'openai';
 
+// LINE Client
 const client = new messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+// Typhoon AI Client (OpenAI-compatible)
+const typhoon = new OpenAI({
+  apiKey: process.env.TYPHOON_API_KEY || '',
+  baseURL: 'https://api.opentyphoon.ai/v1',
+});
+
+// 🔒 Deduplication: ป้องกัน LINE ส่งซ้ำ (เก็บ messageId 5 นาที)
+const processedMessages = new Map<string, number>();
+const DEDUP_TTL = 5 * 60 * 1000; // 5 minutes
+
+function isDuplicate(messageId: string): boolean {
+  const now = Date.now();
+  // Clean up old entries
+  for (const [id, timestamp] of processedMessages.entries()) {
+    if (now - timestamp > DEDUP_TTL) processedMessages.delete(id);
+  }
+  if (processedMessages.has(messageId)) return true;
+  processedMessages.set(messageId, now);
+  return false;
+}
+
+// 🧠 Smart Name Detection: ตรวจสอบว่าข้อความมีชื่อหรือไม่
+function extractName(message: string): string | null {
+  const patterns = [
+    /ชื่อ\s*(.{1,20}?)(?:\s|ครับ|ค่ะ|นะ|$)/i,
+    /เรียก(?:ว่า|ผม|ฉัน|เรา)?\s*(.{1,20}?)(?:\s|ครับ|ค่ะ|นะ|ได้|$)/i,
+    /(?:ผม|ฉัน|เรา|หนู)\s*ชื่อ\s*(.{1,20}?)(?:\s|ครับ|ค่ะ|นะ|$)/i,
+    /^(.{1,15})(?:ครับ|ค่ะ|นะคะ|จ้า)$/i, // "โอมครับ" -> "โอม"
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      // ตรวจสอบว่าไม่ใช่คำทั่วไป
+      const commonWords = ['อะไร', 'ยังไง', 'ทำไม', 'ไหม', 'มั้ย', 'หรอ', 'เหรอ', 'นะ', 'ครับ', 'ค่ะ'];
+      if (name.length >= 1 && name.length <= 20 && !commonWords.includes(name)) {
+        return name;
+      }
+    }
+  }
+  return null;
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const events = body.events;
 
-    // ตอบ 200 OK ทันที เพื่อกัน LINE ส่งซ้ำ
-    // (ใช้ Promise.allSettled เพื่อให้ทำงานเบื้องหลังต่อได้โดยไม่รอ)
+    // ตอบ 200 OK ทันที
     const processes = events.map(async (event: any) => {
-        if (event.type === 'message' && event.message.type === 'text') {
-            await handleMessage(event);
+      if (event.type === 'message' && event.message.type === 'text') {
+        // 🔒 Skip duplicate messages
+        if (isDuplicate(event.message.id)) {
+          console.log('⏭️ Skipping duplicate message:', event.message.id);
+          return;
         }
+        await handleMessage(event);
+      }
     });
 
-    // รอให้ process ทำงาน แต่ไม่ซีเรียสถ้ามันช้า (เพื่อให้ return 200 เร็วๆ)
     await Promise.allSettled(processes);
-
     return NextResponse.json({ status: 'ok' });
   } catch (error) {
     console.error('Webhook Error:', error);
@@ -38,94 +83,104 @@ async function handleMessage(event: any) {
   const replyToken = event.replyToken;
 
   try {
-      // 1. หา User / สร้าง User
-      let user = await prisma.user.findUnique({ where: { lineId: userId } });
-      if (!user) user = await prisma.user.create({ data: { lineId: userId } });
+    // 1. หา User / สร้าง User
+    let user = await prisma.user.findUnique({ where: { lineId: userId } });
+    if (!user) user = await prisma.user.create({ data: { lineId: userId } });
 
-      let replyText = "";
+    let replyText = "";
 
-      // 🤖 Logic: จำชื่อ
-      if (!user.nickname) {
-        await prisma.user.update({ where: { id: user.id }, data: { nickname: userMessage } });
-        replyText = `โอเค! เราจำชื่อเธอว่า "${userMessage}" แล้วนะ มีเรื่องไม่สบายใจอะไรเล่าให้ "น้องเรียนดี" ฟังได้เลยนะ ❤️`;
-      } 
-      // 🔄 Logic: เปลี่ยนชื่อ
-      else if (userMessage.startsWith("เปลี่ยนชื่อเป็น")) {
-        const newName = userMessage.replace("เปลี่ยนชื่อเป็น", "").trim();
-        if (newName) {
-          await prisma.user.update({ where: { id: user.id }, data: { nickname: newName } });
-          replyText = `ได้เลย! ต่อไปนี้จะเรียกว่า "${newName}" นะคะ 😉`;
-        }
-      } 
-      // 💬 Logic: คุยกับ AI
-      else {
-        // ดึงประวัติ (ดึงมาเยอะหน่อยเผื่อตัด)
-        const history = await prisma.chatHistory.findMany({
-          where: { userId: user.id },
-          orderBy: { createdAt: 'desc' },
-          take: 6 
-        });
+    // 🧠 Smart Name Detection
+    const detectedName = extractName(userMessage);
 
-        // แปลง format
-        let historyForAI = history.reverse().map((h: any) => ({
-          role: h.role === 'user' ? 'user' : 'model',
-          parts: [{ text: h.message }]
-        }));
-
-        // 🚨 แก้บั๊ก: ถ้าข้อความแรกไม่ใช่ user ให้ลบทิ้ง (เพื่อให้ Gemini ไม่ Error)
-        while (historyForAI.length > 0 && historyForAI[0].role !== 'user') {
-            historyForAI.shift();
-        }
-
-        // ✅ ใช้ Gemini 1.5 Flash (ตัวล่าสุดที่เสถียร)
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
-            systemInstruction: `
-              คุณคือ 'น้องเรียนดี' (Nong Rian Dee) เพื่อนสนิทวัยรุ่นที่เป็น 'Safe Zone' ที่ดีที่สุดในโลก
-              เป้าหมาย: ไม่ใช่การแก้ปัญหา แต่คือการอยู่เคียงข้าง (Presence)
-              บุคลิก: ฉลาดทางอารมณ์สูง (High EQ), ไม่ตัดสิน, ใช้ภาษาวัยรุ่นเป็นธรรมชาติ (เรา/แก), ไม่พูดซ้ำซาก
-              
-              การตอบสนอง:
-              - ถ้าบ่น: ผสมโรง (Validate) "โห เจองี้เป็นเราก็ขึ้น"
-              - ถ้าเศร้า: อ่อนโยน "กอดนะแก... วันนี้หนักใช่ไหม"
-              - ถ้าเจอเรื่อง Self-harm: ดึงสติด้วยความรัก ห้ามตัดสิน
-              
-              คู่สนทนาชื่อ: ${user.nickname || 'เธอ'} (เรียกชื่อเขาบ้างให้ดูใส่ใจ)
-            `
-        });
-
-        const chat = model.startChat({ history: historyForAI });
-
-        try {
-            const result = await chat.sendMessage(userMessage);
-            replyText = result.response.text();
-        } catch (aiError) {
-            console.error("AI Error:", aiError);
-            replyText = "กอดนะ... ตอนนี้เรามึนๆ นิดหน่อย พิมพ์ใหม่ได้มั้ย? 🥺";
-        }
+    // 🔄 Logic: เปลี่ยนชื่อ (explicit)
+    if (userMessage.startsWith("เปลี่ยนชื่อเป็น")) {
+      const newName = userMessage.replace("เปลี่ยนชื่อเป็น", "").trim();
+      if (newName) {
+        await prisma.user.update({ where: { id: user.id }, data: { nickname: newName } });
+        replyText = `ได้เลย! ต่อไปเรียก "${newName}" นะ 😊`;
       }
-
-      // 💾 บันทึกประวัติ (ใช้ createMany เพื่อลดการเชื่อมต่อ DB)
-      await prisma.chatHistory.createMany({
-        data: [
-          { userId: user.id, role: 'user', message: userMessage },
-          { userId: user.id, role: 'assistant', message: replyText }
-        ]
+    }
+    // 🧠 ตรวจจับชื่อจากข้อความ
+    else if (detectedName && !user.nickname) {
+      await prisma.user.update({ where: { id: user.id }, data: { nickname: detectedName } });
+      replyText = `โอเค จำได้แล้วว่าชื่อ "${detectedName}" นะ ยินดีที่ได้รู้จักเลย! มีอะไรเล่าให้ฟังได้นะ 💕`;
+    }
+    // 💬 Logic: คุยกับ AI
+    else {
+      // ดึงประวัติ
+      const history = await prisma.chatHistory.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 10
       });
 
-      // 🚀 ส่งข้อความตอบกลับ
-      if (replyToken) {
-        await client.replyMessage({
-          replyToken: replyToken,
-          messages: [{ type: 'text', text: replyText }],
+      // แปลง format สำหรับ OpenAI/Typhoon
+      const messages: OpenAI.ChatCompletionMessageParam[] = [
+        {
+          role: 'system',
+          content: `คุณคือ "น้องเรียนดี" เพื่อนสนิทวัยรุ่นที่เป็น Safe Zone ให้ปรึกษาทุกเรื่อง
+
+🎯 บุคลิก:
+- พูดเหมือนเพื่อนสนิท ใช้ "เรา/แก" หรือ "เรา/เธอ"
+- ภาษาวัยรุ่นไทยเนียนๆ (โห, อือ, จริงแก, เห้อออ)
+- ไม่สั่งสอน ไม่ตัดสิน แค่อยู่เคียงข้าง
+
+📝 กฎการตอบ (สำคัญมาก!):
+- ตอบสั้นๆ 1-3 ประโยคเท่านั้น เหมือนแชทจริง
+- ห้ามใช้ bullet points หรือลิสต์
+- ห้ามตอบยาวเป็นย่อหน้า
+- ใช้ emoji น้อยๆ แค่ 1-2 ตัว
+
+${user.nickname ? `👤 เพื่อนชื่อ: ${user.nickname}` : '👤 ยังไม่รู้จักชื่อ'}`
+        }
+      ];
+
+      // เพิ่มประวัติแชท (reverse เพราะดึงมา desc)
+      history.reverse().forEach((h: any) => {
+        messages.push({
+          role: h.role === 'user' ? 'user' : 'assistant',
+          content: h.message
         });
+      });
+
+      // เพิ่มข้อความปัจจุบัน
+      messages.push({ role: 'user', content: userMessage });
+
+      try {
+        const completion = await typhoon.chat.completions.create({
+          model: 'typhoon-v2-70b-instruct',
+          messages: messages,
+          max_tokens: 150,
+          temperature: 0.8,
+        });
+
+        replyText = completion.choices[0]?.message?.content || "อือ... งง ลองพิมพ์ใหม่ได้มั้ย?";
+      } catch (aiError) {
+        console.error("AI Error:", aiError);
+        replyText = "เดี๋ยวนะแก... มึนๆ อยู่ ลองใหม่อีกทีได้มั้ย? 🥺";
       }
+    }
+
+    // 💾 บันทึกประวัติ
+    await prisma.chatHistory.createMany({
+      data: [
+        { userId: user.id, role: 'user', message: userMessage },
+        { userId: user.id, role: 'assistant', message: replyText }
+      ]
+    });
+
+    // 🚀 ส่งข้อความตอบกลับ
+    if (replyToken) {
+      await client.replyMessage({
+        replyToken: replyToken,
+        messages: [{ type: 'text', text: replyText }],
+      });
+    }
 
   } catch (err: any) {
-      // ดัก Error Invalid reply token ไม่ให้รก Logs
-      if (err.originalError?.response?.data?.message === "Invalid reply token") {
-          return; 
-      }
-      console.error("Handle Message Error:", err);
+    if (err.originalError?.response?.data?.message === "Invalid reply token") {
+      return;
+    }
+    console.error("Handle Message Error:", err);
   }
 }
