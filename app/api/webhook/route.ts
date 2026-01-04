@@ -147,14 +147,32 @@ ${user.nickname ? `👤 เพื่อนชื่อ: ${user.nickname}` : '�
       messages.push({ role: 'user', content: userMessage });
 
       try {
-        const completion = await typhoon.chat.completions.create({
-          model: 'typhoon-v2.1-12b-instruct',
-          messages: messages,
-          max_tokens: 150,
-          temperature: 0.8,
+        console.log('📤 Calling Typhoon API...');
+        console.log('Messages count:', messages.length);
+
+        const response = await fetch('https://api.opentyphoon.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.TYPHOON_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'typhoon-v2.1-12b-instruct',
+            messages: messages,
+            max_tokens: 150,
+            temperature: 0.8,
+          }),
         });
 
-        replyText = completion.choices[0]?.message?.content || "อือ... งง ลองพิมพ์ใหม่ได้มั้ย?";
+        const data = await response.json();
+
+        if (response.ok) {
+          replyText = data.choices?.[0]?.message?.content || "อือ... งง ลองพิมพ์ใหม่ได้มั้ย?";
+          console.log('✅ AI Response:', replyText.substring(0, 50));
+        } else {
+          console.error('❌ Typhoon Error:', JSON.stringify(data));
+          replyText = "เดี๋ยวนะแก... มึนๆ อยู่ ลองใหม่อีกทีได้มั้ย? 🥺";
+        }
       } catch (aiError) {
         console.error("AI Error:", aiError);
         replyText = "เดี๋ยวนะแก... มึนๆ อยู่ ลองใหม่อีกทีได้มั้ย? 🥺";
