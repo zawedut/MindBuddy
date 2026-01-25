@@ -202,11 +202,13 @@ export default function MoodCalendar() {
           </span>
 
           {/* Emoji อารมณ์ - ขนาดใหญ่ชัดเจน */}
-          <div className="flex-1 w-full flex items-center justify-center">
-            <span className="text-xl sm:text-2xl drop-shadow-sm animate-[popIn_0.3s_ease]">
-              {moodEmojis[entry.score]}
-            </span>
-          </div>
+          {entry && (
+            <div className="flex-1 w-full flex items-center justify-center">
+              <span className="text-xl sm:text-2xl drop-shadow-sm animate-[popIn_0.3s_ease]">
+                {moodEmojis[entry.score]}
+              </span>
+            </div>
+          )}
         </div>
       );
     };
