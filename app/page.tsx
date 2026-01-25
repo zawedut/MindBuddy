@@ -109,7 +109,7 @@ export default function Home() {
         </section>
 
         {/* Admin Link */}
-        <section className="text-center mb-12">
+        {/* <section className="text-center mb-12">
           <Link
             href="/admin"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full text-sm font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
@@ -117,7 +117,7 @@ export default function Home() {
             <span>🔐</span>
             <span>Admin Dashboard</span>
           </Link>
-        </section>
+        </section> */}
 
         {/* Footer */}
         <footer className="text-center">
