@@ -107,14 +107,7 @@ async function handleMessage(event: any) {
     }
     // 💬 Logic: คุยกับ AI
     else {
-      // ดึงประวัติ
-      const history = await prisma.chatHistory.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' },
-        take: 4
-      });
-
-      // แปลง format สำหรับ Typhoon
+      // ส่งแค่ข้อความปัจจุบัน (ไม่ส่ง history ย้อนหลัง แต่ยังจำชื่อ)
       const messages: OpenAI.ChatCompletionMessageParam[] = [
         {
           role: 'system',
@@ -123,19 +116,9 @@ async function handleMessage(event: any) {
 ตอบสั้นๆ 1-2 ประโยค ภาษาเป็นกันเอง (เรา/แก) ไม่สั่งสอน แค่รับฟังเหมือนเพื่อน
 
 บริการ Mind Buddy: ปฏิทินอารมณ์, Buddy Review (รีวิวมหาลัย), Learn with Buddy (ข้อมูลพัฒนาตัวเอง), Mind Care (คลินิกในกทม), Buddy Connect (คุยกับผู้เชี่ยวชาญ), สายด่วน 1323${user.nickname ? ` เพื่อนชื่อ ${user.nickname}` : ''}`
-        }
+        },
+        { role: 'user', content: userMessage }
       ];
-
-      // เพิ่มประวัติแชท (reverse เพราะดึงมา desc)
-      history.reverse().forEach((h: any) => {
-        messages.push({
-          role: h.role === 'user' ? 'user' : 'assistant',
-          content: h.message
-        });
-      });
-
-      // เพิ่มข้อความปัจจุบัน
-      messages.push({ role: 'user', content: userMessage });
 
       try {
         console.log('📤 Calling Typhoon API...');

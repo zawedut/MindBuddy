@@ -38,19 +38,7 @@ export async function POST(req: Request) {
       }
     ];
 
-    // เพิ่มประวัติแชท
-    if (history && Array.isArray(history)) {
-      history.forEach((h: any) => {
-        if (h.parts && h.parts[0]?.text) {
-          messages.push({
-            role: h.role === 'user' ? 'user' : 'assistant',
-            content: h.parts[0].text
-          });
-        }
-      });
-    }
-
-    // เพิ่มข้อความปัจจุบัน
+    // เพิ่มข้อความปัจจุบัน (ไม่ส่ง history ย้อนหลัง)
     messages.push({ role: 'user', content: message });
 
     const completion = await typhoon.chat.completions.create({

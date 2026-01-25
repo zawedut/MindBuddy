@@ -334,7 +334,7 @@ export default function ResourcesHub() {
 
                         {/* Body */}
                         <div className="p-6">
-                            <div className="w-full rounded-2xl mb-5 shadow-md overflow-hidden relative aspect-[4/3] min-h-[300px]">
+                            <div className="w-full rounded-2xl mb-5 shadow-md overflow-hidden relative" style={{ minHeight: '400px' }}>
                                 <Image
                                     src={announcement.modalContent.image}
                                     alt={announcement.title}
