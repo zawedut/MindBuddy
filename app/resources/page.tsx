@@ -334,12 +334,12 @@ export default function ResourcesHub() {
 
                         {/* Body */}
                         <div className="p-6">
-                            <div className="w-full rounded-2xl mb-5 shadow-md overflow-hidden relative aspect-video">
+                            <div className="w-full rounded-2xl mb-5 shadow-md overflow-hidden relative aspect-[4/3] min-h-[300px]">
                                 <Image
                                     src={announcement.modalContent.image}
                                     alt={announcement.title}
                                     fill
-                                    className="object-cover"
+                                    className="object-contain bg-gradient-to-br from-purple-50 to-pink-50"
                                     sizes="(max-width: 768px) 100vw, 500px"
                                 />
                             </div>
