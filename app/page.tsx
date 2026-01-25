@@ -26,22 +26,13 @@ const pages = [
     borderColor: 'hover:border-teal-300'
   },
   {
-    href: '/flashinfo',
-    icon: '📢',
-    title: 'ข่าวสาร Flash Info',
-    description: 'อัพเดทข่าวสาร ความรู้ และเคล็ดลับดีดีสำหรับสุขภาพจิต',
+    href: '/resources',
+    icon: '🌟',
+    title: 'ข่าวสาร & แหล่งเรียนรู้',
+    description: 'รวมข่าวสาร Flash Info, เว็บไซต์ TCAS และคอร์สออนไลน์ฟรี',
     gradient: 'from-lavender-100 to-purple-100',
-    iconBg: 'bg-purple-200',
+    iconBg: 'bg-gradient-to-br from-purple-200 to-orange-200',
     borderColor: 'hover:border-purple-300'
-  },
-  {
-    href: '/learningwebsite',
-    icon: '📚',
-    title: 'แหล่งเรียนรู้',
-    description: 'รวมเว็บไซต์การศึกษา TCAS และคอร์สออนไลน์ฟรี',
-    gradient: 'from-peach-100 to-orange-100',
-    iconBg: 'bg-orange-200',
-    borderColor: 'hover:border-orange-300'
   }
 ];
 
