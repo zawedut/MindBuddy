@@ -21,9 +21,27 @@ export default function MoodCalendar() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [selectedScore, setSelectedScore] = useState<number | null>(null);
   const [comment, setComment] = useState<string>("");
+  const [isReady, setIsReady] = useState<boolean>(false);
 
   const monthNames = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
   const weekDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+
+  // Emoji และชื่อสำหรับแต่ละระดับอารมณ์
+  const moodEmojis: { [key: number]: string } = {
+    5: '😄',  // ดีมาก
+    4: '🙂',  // ดี
+    3: '😐',  // เฉยๆ
+    2: '😔',  // แย่
+    1: '😢',  // แย่มาก
+  };
+
+  const moodOptionsList = [
+    { score: 5, label: 'ดีมาก', emoji: '😄', bg: 'bg-[#E8F8E8]', active: 'bg-[#C8F0C8] border-[#66D966]' },
+    { score: 4, label: 'ดี', emoji: '🙂', bg: 'bg-[#E8F4FD]', active: 'bg-[#D0E7F9] border-[#6BA3D4]' },
+    { score: 3, label: 'เฉยๆ', emoji: '😐', bg: 'bg-[#FFF8E1]', active: 'bg-[#FFECB3] border-[#FFC04D]' },
+    { score: 2, label: 'แย่', emoji: '😔', bg: 'bg-[#FFECD9]', active: 'bg-[#FFD4A8] border-[#FFB366]' },
+    { score: 1, label: 'แย่มาก', emoji: '😢', bg: 'bg-[#FFE5E5]', active: 'bg-[#FFD0D0] border-[#FF6B6B]' },
+  ];
 
   useEffect(() => {
     const initLiff = async () => {
@@ -36,8 +54,12 @@ export default function MoodCalendar() {
         const userProfile = await liff.getProfile();
         setProfile(userProfile);
         fetchMoods(userProfile.userId);
+        setIsReady(true);
       } catch (e) {
         console.error("LIFF Init Failed", e);
+        // Fallback: ใช้งานได้โดยไม่ต้อง login
+        setProfile({ userId: 'guest', displayName: 'ผู้ใช้งาน' });
+        setIsReady(true);
       }
     };
     initLiff();
@@ -121,11 +143,6 @@ export default function MoodCalendar() {
     closeModal();
   };
 
-  const getMoodImage = (score: number) => {
-    const map: { [key: number]: string } = { 5: '/assets/happy.png', 4: '/assets/wink.png', 3: '/assets/bored.png', 2: '/assets/sad.png', 1: '/assets/angry.png' }
-    return map[score];
-  }
-
   const getMoodStyles = (score: number) => {
     switch (score) {
       case 5: return "bg-gradient-to-br from-[#E8F8E8] to-[#C8F0C8] border-[#66D966]";
@@ -179,15 +196,12 @@ export default function MoodCalendar() {
             {day}
           </span>
 
-          {/* รูปอารมณ์ - อยู่ตรงกลาง */}
+          {/* Emoji อารมณ์ - ขนาดใหญ่ชัดเจน */}
           {entry && (
             <div className="flex-1 w-full flex items-center justify-center">
-              <img
-                src={getMoodImage(entry.score)}
-                alt="mood"
-                className="w-[70%] max-w-[40px] h-auto object-contain drop-shadow-md animate-[popIn_0.3s_ease]"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
-              />
+              <span className="text-2xl sm:text-3xl drop-shadow-sm animate-[popIn_0.3s_ease]">
+                {moodEmojis[entry.score]}
+              </span>
             </div>
           )}
         </div>
@@ -207,37 +221,15 @@ export default function MoodCalendar() {
     return cells;
   };
 
-  const moodOptionsList = [
-    { score: 5, label: 'ดีใจ', bg: 'bg-[#E8F8E8]', active: 'bg-[#C8F0C8] border-[#66D966]' },
-    { score: 4, label: 'ขยิบตา', bg: 'bg-[#E8F4FD]', active: 'bg-[#D0E7F9] border-[#6BA3D4]' },
-    { score: 3, label: 'เบื่อ', bg: 'bg-[#FFF8E1]', active: 'bg-[#FFECB3] border-[#FFC04D]' },
-    { score: 2, label: 'เศร้า', bg: 'bg-[#FFECD9]', active: 'bg-[#FFD4A8] border-[#FFB366]' },
-    { score: 1, label: 'โกรธ', bg: 'bg-[#FFE5E5]', active: 'bg-[#FFD0D0] border-[#FF6B6B]' },
-  ];
-
-  // 🌀 Modern Loading Spinner
-  if (!profile) {
+  // 🌀 Loading - แสดงสั้นๆ แล้วเข้าได้เลย
+  if (!isReady) {
     return (
       <div className={`min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FFE5F1] via-[#FFF0F5] to-[#E8F4FD] ${mitr.className}`}>
-        {/* Modern Dual-Ring Spinner */}
-        <div className="relative w-20 h-20 mb-6">
+        <div className="relative w-16 h-16 mb-4">
           <div className="absolute inset-0 rounded-full border-4 border-pink-100"></div>
           <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#E85D9A] animate-spin"></div>
-          <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-[#FFB3D9] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
-          <div className="absolute inset-4 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center">
-            <span className="text-2xl animate-pulse">💭</span>
-          </div>
         </div>
-
-        {/* Loading Text with Bouncing Dots */}
-        <div className="text-center">
-          <p className="text-[#E85D9A] font-semibold text-lg mb-2">กำลังเชื่อมต่อ LINE</p>
-          <div className="flex gap-1 justify-center">
-            <span className="w-2 h-2 bg-[#E85D9A] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-            <span className="w-2 h-2 bg-[#FFB3D9] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-            <span className="w-2 h-2 bg-[#E85D9A] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-          </div>
-        </div>
+        <p className="text-[#E85D9A] font-medium">กำลังโหลด...</p>
       </div>
     );
   }
@@ -297,19 +289,19 @@ export default function MoodCalendar() {
           <div className="w-[88%] max-w-[400px] bg-white p-6 rounded-[30px] shadow-2xl text-center animate-[popIn_0.3s_cubic-bezier(0.34,1.56,0.64,1)]">
             <h3 className="text-xl text-[#2D2D2D] mb-5 font-medium">วันนี้รู้สึกยังไง?</h3>
 
-            <div className="flex flex-wrap justify-center gap-2 mb-5">
+            {/* Emoji ขนาดใหญ่ ชัดเจน */}
+            <div className="flex flex-wrap justify-center gap-3 mb-5">
               {moodOptionsList.map((opt) => (
-                <div key={opt.score} className="group relative">
+                <div key={opt.score} className="flex flex-col items-center gap-1">
                   <button
                     onClick={() => setSelectedScore(opt.score)}
-                    className={`w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] rounded-2xl border-4 transition-all duration-200 bg-center bg-no-repeat bg-[length:65%] hover:-translate-y-1 active:scale-95
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-4 transition-all duration-200 flex items-center justify-center text-3xl sm:text-4xl hover:-translate-y-1 active:scale-95
                         ${selectedScore === opt.score ? `${opt.active} shadow-lg -translate-y-1` : `${opt.bg} border-transparent hover:brightness-95`}
                     `}
-                    style={{ backgroundImage: `url(${getMoodImage(opt.score)})` }}
-                  ></button>
-                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs py-1 px-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                    {opt.label}
-                  </div>
+                  >
+                    {opt.emoji}
+                  </button>
+                  <span className="text-xs text-gray-500">{opt.label}</span>
                 </div>
               ))}
             </div>
