@@ -46,7 +46,12 @@ export default function MoodCalendar() {
   useEffect(() => {
     const initLiff = async () => {
       try {
-        await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        const liffPromise = liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        // Timeout 2 วินาที ถ้าโหลดนานเกินไปให้ตัดจบ
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
+
+        await Promise.race([liffPromise, timeoutPromise]);
+
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
@@ -56,7 +61,7 @@ export default function MoodCalendar() {
         fetchMoods(userProfile.userId);
         setIsReady(true);
       } catch (e) {
-        console.error("LIFF Init Failed", e);
+        console.error("LIFF Init Failed/Timeout", e);
         // Fallback: ใช้งานได้โดยไม่ต้อง login
         setProfile({ userId: 'guest', displayName: 'ผู้ใช้งาน' });
         setIsReady(true);
@@ -197,13 +202,11 @@ export default function MoodCalendar() {
           </span>
 
           {/* Emoji อารมณ์ - ขนาดใหญ่ชัดเจน */}
-          {entry && (
-            <div className="flex-1 w-full flex items-center justify-center">
-              <span className="text-2xl sm:text-3xl drop-shadow-sm animate-[popIn_0.3s_ease]">
-                {moodEmojis[entry.score]}
-              </span>
-            </div>
-          )}
+          <div className="flex-1 w-full flex items-center justify-center">
+            <span className="text-xl sm:text-2xl drop-shadow-sm animate-[popIn_0.3s_ease]">
+              {moodEmojis[entry.score]}
+            </span>
+          </div>
         </div>
       );
     };
@@ -295,7 +298,7 @@ export default function MoodCalendar() {
                 <div key={opt.score} className="flex flex-col items-center gap-1">
                   <button
                     onClick={() => setSelectedScore(opt.score)}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-4 transition-all duration-200 flex items-center justify-center text-3xl sm:text-4xl hover:-translate-y-1 active:scale-95
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-4 transition-all duration-200 flex items-center justify-center text-2xl sm:text-3xl hover:-translate-y-1 active:scale-95
                         ${selectedScore === opt.score ? `${opt.active} shadow-lg -translate-y-1` : `${opt.bg} border-transparent hover:brightness-95`}
                     `}
                   >
