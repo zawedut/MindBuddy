@@ -131,7 +131,7 @@ async function handleMessage(event: any) {
             'Authorization': `Bearer ${process.env.TYPHOON_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'typhoon-v2.1-12b-instruct',
+            model: 'typhoon-v2.5-30b-a3b-instruct',
             messages: messages,
             max_tokens: 500,
             temperature: 0.8,

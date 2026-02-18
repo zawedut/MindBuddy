@@ -23,7 +23,7 @@ export async function GET() {
     // 2. ทดสอบ Typhoon API
     try {
         const completion = await typhoon.chat.completions.create({
-            model: 'typhoon-v2.1-12b-instruct',
+            model: 'typhoon-v2.5-30b-a3b-instruct',
             messages: [
                 { role: 'user', content: 'สวัสดี ตอบสั้นๆ ว่า "ทดสอบสำเร็จ"' }
             ],
@@ -32,25 +32,21 @@ export async function GET() {
 
         results.tests.typhoonApi = {
             success: true,
-            model: 'typhoon-v2.1-12b-instruct',
+            model: 'typhoon-v2.5-30b-a3b-instruct',
             response: completion.choices[0]?.message?.content,
         };
     } catch (error: any) {
         results.tests.typhoonApi = {
             success: false,
-            model: 'typhoon-v2.1-12b-instruct',
+            model: 'typhoon-v2.5-30b-a3b-instruct',
             error: error.message,
             status: error.status,
             details: error.error || 'No details',
         };
     }
 
-    // 3. ทดสอบ model อื่น
-    const modelsToTest = [
-        'typhoon-v2.5-30b-a3b-instruct',
-        'llama3.1-typhoon2-8b-instruct',
-        'typhoon-instruct',
-    ];
+    // 3. ทดสอบ model อื่น (models ที่ยังใช้ได้จริงเท่านั้น)
+    const modelsToTest: string[] = [];
 
     for (const model of modelsToTest) {
         try {

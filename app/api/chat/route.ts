@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     messages.push({ role: 'user', content: message });
 
     const completion = await typhoon.chat.completions.create({
-      model: 'typhoon-v2.1-12b-instruct',
+      model: 'typhoon-v2.5-30b-a3b-instruct',
       messages: messages,
       max_tokens: 150,
       temperature: 0.8,
