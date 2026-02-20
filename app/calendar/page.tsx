@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Mitr, Fredoka } from 'next/font/google';
+import Link from 'next/link';
 import liff from '@line/liff';
 
 // Config Font
@@ -284,6 +285,31 @@ export default function MoodCalendar() {
           ))}
           {renderCalendar()}
         </div>
+      </div>
+
+      {/* Feature Buttons */}
+      <div className="w-full max-w-[420px] grid grid-cols-2 gap-3 mt-5">
+        <Link
+          href="/calendar/summary"
+          className="group relative bg-white/60 backdrop-blur-sm p-4 rounded-[20px] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center border-2 border-transparent active:scale-95"
+          style={{ ['--hover-border' as string]: currentTheme.accent }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accent)}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+        >
+          <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">📊</div>
+          <div className="text-sm font-semibold text-gray-600 group-hover:text-gray-800">สรุปผลอารมณ์</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">รายสัปดาห์ / เดือน</div>
+        </Link>
+        <Link
+          href="/calendar/rewards"
+          className="group relative bg-white/60 backdrop-blur-sm p-4 rounded-[20px] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center border-2 border-transparent active:scale-95"
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accent)}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+        >
+          <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🏆</div>
+          <div className="text-sm font-semibold text-gray-600 group-hover:text-gray-800">สะสมแต้ม</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">เลเวล & เหรียญรางวัล</div>
+        </Link>
       </div>
 
       {modalOpen && (
