@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Mitr, Fredoka } from 'next/font/google';
 import Link from 'next/link';
 import liff from '@line/liff';
@@ -12,6 +12,16 @@ const fredoka = Fredoka({ weight: ['400', '500', '600', '700'], subsets: ['latin
 // Types
 interface MoodEntry { score: number; comment: string; updated: number; }
 interface MoodMap { [key: string]: MoodEntry; }
+
+// Level System — ธีมเป็ด 🦆
+const levels = [
+  { name: 'เป็ดน้อย', emoji: '🐣', minPoints: 0, color: '#FFD54F' },
+  { name: 'เป็ดเริ่มต้น', emoji: '🐥', minPoints: 100, color: '#FFC107' },
+  { name: 'เป็ดทั่วไป', emoji: '🦆', minPoints: 300, color: '#FF9800' },
+  { name: 'เป็ดดาวเด่น', emoji: '⭐', minPoints: 600, color: '#AB47BC' },
+  { name: 'เป็ดเทพ', emoji: '🔮', minPoints: 1000, color: '#42A5F5' },
+  { name: 'ตำนานเป็ด', emoji: '👑', minPoints: 2000, color: '#E040FB' },
+];
 
 export default function MoodCalendar() {
   // State
@@ -47,7 +57,14 @@ export default function MoodCalendar() {
   useEffect(() => {
     const initLiff = async () => {
       try {
-        const liffPromise = liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+        if (!liffId) {
+          console.warn('LIFF ID not configured, using guest mode');
+          setProfile({ userId: 'guest', displayName: 'ผู้ใช้งาน' });
+          setIsReady(true);
+          return;
+        }
+        const liffPromise = liff.init({ liffId });
         // Timeout 2 วินาที ถ้าโหลดนานเกินไปให้ตัดจบ
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
 
@@ -89,6 +106,38 @@ export default function MoodCalendar() {
       }
     } catch (e) { console.error("Load failed", e); }
   }
+
+  // Compute level info from moods
+  const levelInfo = useMemo(() => {
+    const sortedKeys = Object.keys(moods).sort();
+    let points = 0;
+    let streakCount = 1;
+    for (let i = 0; i < sortedKeys.length; i++) {
+      if (i > 0) {
+        const prev = new Date(sortedKeys[i - 1]);
+        const curr = new Date(sortedKeys[i]);
+        const diff = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+        streakCount = diff === 1 ? streakCount + 1 : 1;
+      }
+      const bonus = streakCount >= 7 ? 2 : streakCount >= 3 ? 1.5 : 1;
+      points += Math.floor(10 * bonus);
+    }
+    const currentLevel = [...levels].reverse().find(l => points >= l.minPoints) || levels[0];
+    const nextLevel = levels[levels.indexOf(currentLevel) + 1];
+    const progress = nextLevel
+      ? ((points - currentLevel.minPoints) / (nextLevel.minPoints - currentLevel.minPoints)) * 100
+      : 100;
+    return {
+      emoji: currentLevel.emoji,
+      name: currentLevel.name,
+      color: currentLevel.color,
+      points,
+      progress: Math.min(progress, 100),
+      nextName: nextLevel?.name || null,
+      nextEmoji: nextLevel?.emoji || null,
+      pointsToNext: nextLevel ? nextLevel.minPoints - points : 0,
+    };
+  }, [moods]);
 
   // 🌤️ Logic ฤดูกาล
   const getSeasonTheme = (date: Date) => {
@@ -287,28 +336,48 @@ export default function MoodCalendar() {
         </div>
       </div>
 
-      {/* Feature Buttons */}
-      <div className="w-full max-w-[420px] grid grid-cols-2 gap-3 mt-5">
+      {/* Level Preview Card */}
+      <Link
+        href="/calendar/rewards"
+        className="w-full max-w-[420px] mt-5 group bg-white/60 backdrop-blur-sm rounded-[20px] p-4 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 border-2 border-transparent active:scale-[0.98]"
+        onMouseEnter={(e) => (e.currentTarget.style.borderColor = levelInfo.color)}
+        onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+      >
+        <div className="text-3xl group-hover:scale-110 transition-transform">{levelInfo.emoji}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-semibold text-gray-700">{levelInfo.name}</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: levelInfo.color }}>
+              {levelInfo.points} แต้ม
+            </span>
+          </div>
+          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${levelInfo.progress}%`, backgroundColor: levelInfo.color }}
+            />
+          </div>
+          <div className="text-[10px] text-gray-400 mt-1">
+            {levelInfo.nextName ? `อีก ${levelInfo.pointsToNext} แต้มถึง ${levelInfo.nextEmoji} ${levelInfo.nextName}` : '🎉 เลเวลสูงสุด!'}
+          </div>
+        </div>
+        <div className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all text-lg">→</div>
+      </Link>
+
+      {/* Feature Button */}
+      <div className="w-full max-w-[420px] mt-3">
         <Link
           href="/calendar/summary"
-          className="group relative bg-white/60 backdrop-blur-sm p-4 rounded-[20px] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center border-2 border-transparent active:scale-95"
-          style={{ ['--hover-border' as string]: currentTheme.accent }}
+          className="group flex items-center gap-3 w-full bg-white/60 backdrop-blur-sm p-4 rounded-[20px] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-2 border-transparent active:scale-[0.98]"
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accent)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
         >
-          <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">📊</div>
-          <div className="text-sm font-semibold text-gray-600 group-hover:text-gray-800">สรุปผลอารมณ์</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">รายสัปดาห์ / เดือน</div>
-        </Link>
-        <Link
-          href="/calendar/rewards"
-          className="group relative bg-white/60 backdrop-blur-sm p-4 rounded-[20px] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center border-2 border-transparent active:scale-95"
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accent)}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
-        >
-          <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🏆</div>
-          <div className="text-sm font-semibold text-gray-600 group-hover:text-gray-800">สะสมแต้ม</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">เลเวล & เหรียญรางวัล</div>
+          <div className="text-2xl group-hover:scale-110 transition-transform">📊</div>
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-gray-600 group-hover:text-gray-800">สรุปผลอารมณ์</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">ดูสรุปรายสัปดาห์ / เดือน / ปี</div>
+          </div>
+          <div className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all text-lg">→</div>
         </Link>
       </div>
 

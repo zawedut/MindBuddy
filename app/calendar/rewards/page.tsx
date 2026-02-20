@@ -12,14 +12,14 @@ const fredoka = Fredoka({ weight: ['400', '500', '600', '700'], subsets: ['latin
 interface MoodEntry { score: number; comment: string; updated: number; }
 interface MoodMap { [key: string]: MoodEntry; }
 
-// Level System
+// Level System — ธีมเป็ด 🦆
 const levels = [
-  { name: 'เมล็ดพันธุ์', emoji: '🌱', minPoints: 0, color: '#A8D5A2' },
-  { name: 'ต้นกล้า', emoji: '🌿', minPoints: 100, color: '#7BC47F' },
-  { name: 'ต้นไม้', emoji: '🌳', minPoints: 300, color: '#4CAF50' },
-  { name: 'ดาวเด่น', emoji: '🌟', minPoints: 600, color: '#FFC107' },
-  { name: 'เพชรใจ', emoji: '💎', minPoints: 1000, color: '#42A5F5' },
-  { name: 'ตำนาน', emoji: '👑', minPoints: 2000, color: '#E040FB' },
+  { name: 'เป็ดน้อย', emoji: '🐣', minPoints: 0, color: '#FFD54F' },
+  { name: 'เป็ดเริ่มต้น', emoji: '🐥', minPoints: 100, color: '#FFC107' },
+  { name: 'เป็ดทั่วไป', emoji: '🦆', minPoints: 300, color: '#FF9800' },
+  { name: 'เป็ดดาวเด่น', emoji: '⭐', minPoints: 600, color: '#AB47BC' },
+  { name: 'เป็ดเทพ', emoji: '💎', minPoints: 1000, color: '#42A5F5' },
+  { name: 'ตำนานเป็ด', emoji: '👑', minPoints: 2000, color: '#E040FB' },
 ];
 
 // Achievement badges
@@ -41,7 +41,14 @@ export default function MoodRewards() {
   useEffect(() => {
     const initLiff = async () => {
       try {
-        const liffPromise = liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+        if (!liffId) {
+          console.warn('LIFF ID not configured, using guest mode');
+          setProfile({ userId: 'guest', displayName: 'ผู้ใช้งาน' });
+          setIsReady(true);
+          return;
+        }
+        const liffPromise = liff.init({ liffId });
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
         await Promise.race([liffPromise, timeoutPromise]);
         if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -217,7 +224,7 @@ export default function MoodRewards() {
         </Link>
 
         <h1 className="text-2xl font-semibold tracking-wide flex items-center gap-2" style={{ color: theme.accent }}>
-          🏆 สะสมแต้ม
+          🦆 ระดับของเป็ด
         </h1>
       </div>
 
